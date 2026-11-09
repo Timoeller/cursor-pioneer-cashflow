@@ -18,11 +18,13 @@ import type { PlanState } from './model/types'
 import { normalizeState } from './storage/local'
 import { toPlain, type ScenarioStore } from './storage/scenarios'
 
+// Web config of the pioneer-cashflow project. These values are public; firestore.rules protects the data.
+// The VITE_FIREBASE_* variables override them, e.g. to point at the emulators.
 const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyB0-h_i0XiV14yYHoSe2CpIkcjnkEAcDjk',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'pioneer-cashflow.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'pioneer-cashflow',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:706818236179:web:782aa8e32151f71788c4e6',
 }
 
 export const firebaseEnabled = Boolean(config.apiKey && config.projectId && config.authDomain)
