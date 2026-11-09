@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "emulators": "npx --yes firebase-tools@latest emulators:start --project demo-cashflow"
   },
   "dependencies": {
     "firebase": "^13.2.0",

@@ -29,7 +29,7 @@ export function SummaryStats({ summary: s, settings }: Props) {
     <div className="stats">
       <Stat
         label="Runway"
-        value={s.firstNegativeMonth == null ? `${horizon}+ months` : `${s.runwayMonths} months`}
+        value={s.firstNegativeMonth == null ? `${horizon}+ months` : `${s.runwayMonths} ${s.runwayMonths === 1 ? 'month' : 'months'}`}
         sub={runwayText}
         tone={s.firstNegativeMonth == null ? 'good' : s.runwayMonths < 6 ? 'bad' : 'warn'}
       />

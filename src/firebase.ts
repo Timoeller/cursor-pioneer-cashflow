@@ -1,8 +1,9 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { GoogleAuthProvider, getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, type Auth, type User } from 'firebase/auth'
+import { GoogleAuthProvider, connectAuthEmulator, getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, type Auth, type User } from 'firebase/auth'
 import {
   addDoc,
   collection,
+  connectFirestoreEmulator,
   deleteDoc,
   doc,
   getDoc,
@@ -18,10 +19,10 @@ import { normalizeState } from './storage/local'
 import { toPlain, type ScenarioStore } from './storage/scenarios'
 
 const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string | undefined,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID as string | undefined,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID as string | undefined,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
 export const firebaseEnabled = Boolean(config.apiKey && config.projectId && config.authDomain)
@@ -36,6 +37,10 @@ function init() {
     app = initializeApp(config)
     auth = getAuth(app)
     db = getFirestore(app)
+    if (import.meta.env.VITE_FIREBASE_USE_EMULATOR === 'true') {
+      connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
+      connectFirestoreEmulator(db, '127.0.0.1', 8080)
+    }
   }
   return { auth: auth!, db: db! }
 }
