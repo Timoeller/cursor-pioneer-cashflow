@@ -1,4 +1,11 @@
 {
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Pioneer Cash Flow"
+      }
+    }
+  },
   "firestore": {
     "rules": "firestore.rules"
   },
