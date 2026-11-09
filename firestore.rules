@@ -9,7 +9,7 @@ rules_version = '2';
 // Fields:
 //   - name: string (required, 1-200 chars) - scenario name shown in the picker
 //   - state: map (required) - the PlanState from src/model/types.ts:
-//       version: 1, settings: map, and the lists costs, employees,
+//       version: 1, settings: map, fundingPeriod: map, and the lists costs, employees,
 //       grantComponents, tranches, founderCash (each at most 500 entries)
 //   - updatedAt: timestamp (required, always the server time of the write)
 //
@@ -35,11 +35,13 @@ service cloud.firestore {
 
     function isValidPlanState(state) {
       return state is map
-        && state.keys().hasAll(['version', 'settings', 'costs', 'employees', 'grantComponents', 'tranches', 'founderCash'])
-        && state.keys().hasOnly(['version', 'settings', 'costs', 'employees', 'grantComponents', 'tranches', 'founderCash'])
+        && state.keys().hasAll(['version', 'settings', 'costs', 'employees', 'fundingPeriod', 'grantComponents', 'tranches', 'founderCash'])
+        && state.keys().hasOnly(['version', 'settings', 'costs', 'employees', 'fundingPeriod', 'grantComponents', 'tranches', 'founderCash'])
         && state.version == 1
         && state.settings is map
         && state.settings.size() <= 50
+        && state.fundingPeriod is map
+        && state.fundingPeriod.size() <= 10
         && isValidList(state.costs)
         && isValidList(state.employees)
         && isValidList(state.grantComponents)
