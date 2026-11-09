@@ -1,5 +1,5 @@
 import { createInitialState } from '../data/initialState'
-import type { CostItem, Employee, PlanState } from '../model/types'
+import type { CostItem, Employee, GrantComponent, PlanState, Tranche } from '../model/types'
 
 const KEY = 'pioneer-cashflow:state'
 
@@ -18,8 +18,24 @@ export function normalizeState(raw: unknown): PlanState {
     settings: { ...base.settings, ...(r.settings ?? {}) },
     costs: arr<Partial<CostItem>>(r.costs, base.costs).map((c) => ({ ...base.costs[0], comment: '', endMonth: null, ...c })),
     employees: arr<Partial<Employee>>(r.employees, base.employees).map((e) => ({ ...base.employees[0], endMonth: null, ...e })),
-    grantComponents: arr(r.grantComponents, base.grantComponents),
-    tranches: arr(r.tranches, base.tranches),
+    fundingPeriod: { ...base.fundingPeriod, ...(r.fundingPeriod ?? {}) },
+    // components saved before the grant/loan split were plain "amount x rate" grants
+    grantComponents: arr<Partial<GrantComponent>>(r.grantComponents, base.grantComponents).map((g) => ({
+      id: newId('g'),
+      name: '',
+      amount: 0,
+      ratePct: 80,
+      ...g,
+      basis: g.basis === 'personnel' ? 'personnel' : 'manual',
+      grantSharePct: g.grantSharePct ?? 100,
+    })),
+    tranches: arr<Partial<Tranche>>(r.tranches, base.tranches).map((t) => ({
+      id: newId('t'),
+      month: 1,
+      amount: 0,
+      ...t,
+      kind: t.kind === 'loan' ? 'loan' : 'grant',
+    })),
     founderCash: arr(r.founderCash, base.founderCash),
   }
 }

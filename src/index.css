@@ -12,6 +12,7 @@
   --warn: #d97706;
   --founder: #8b5cf6;
   --grant: #10b981;
+  --loan: #0ea5e9;
   --cost: #f87171;
   --radius: 12px;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -157,3 +158,14 @@ tfoot td { font-weight: 600; background: var(--accent-soft); border-bottom: none
 .notice.bad { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--text); }
 
 .footer { margin-top: 24px; text-align: center; }
+
+.funding-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 4px; }
+.funding-summary > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; background: var(--accent-soft); border-left: 4px solid var(--border); }
+.funding-summary > div.grant { border-left-color: var(--grant); }
+.funding-summary > div.loan { border-left-color: var(--loan); }
+.funding-summary > div.own { border-left-color: var(--warn); }
+.funding-summary span { font-size: 12px; color: var(--muted); }
+.funding-summary strong { font-size: 17px; }
+.funding-summary small { font-size: 11px; color: var(--muted); }
+.grant-text { color: var(--grant); }
+.loan-text { color: var(--loan); }

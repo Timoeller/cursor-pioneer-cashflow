@@ -8,14 +8,21 @@ import { NumberField, RemoveButton, TextField } from './fields'
 interface Props {
   employees: Employee[]
   surchargePct: number
+  /** Funding rate of the personnel grant component, if any. */
+  fundingRatePct: number | null
   currency: string
   onChange: (employees: Employee[]) => void
 }
 
-export function EmployeesTable({ employees, surchargePct, currency, onChange }: Props) {
+export function EmployeesTable({ employees, surchargePct, fundingRatePct, currency, onChange }: Props) {
   const set = (id: string, patch: Partial<Employee>) => onChange(updateRow(employees, id, patch))
   const totalCost = employees.reduce((s, e) => s + employeeMonthlyCost(e, surchargePct), 0)
   const totalEligible = employees.reduce((s, e) => s + (employeeMonthlyCost(e, surchargePct) * e.fundingEligiblePct) / 100, 0)
+  const funded = (eligible: number) => (fundingRatePct == null ? null : (eligible * fundingRatePct) / 100)
+  const fundedText = (eligible: number) => {
+    const v = funded(eligible)
+    return v == null ? '-' : money(v, currency)
+  }
 
   return (
     <section className="card">
@@ -23,7 +30,7 @@ export function EmployeesTable({ employees, surchargePct, currency, onChange }: 
         <div>
           <h2>Employees</h2>
           <p className="muted">
-            Gross monthly salary. Employer cost adds {surchargePct} % on top. Start month counts from founding (month 1).
+            Gross monthly salary. Employer cost adds {surchargePct} % on top. Start month counts from founding (month 1). Funding-eligible % is the share of the person's cost that counts as eligible; the grant then funds {fundingRatePct ?? '-'} % of that.
           </p>
         </div>
         <button
@@ -50,6 +57,7 @@ export function EmployeesTable({ employees, surchargePct, currency, onChange }: 
               <th className="r">Funding-eligible %</th>
               <th className="r">Employer cost / month</th>
               <th className="r">Eligible / month</th>
+              <th className="r" title="Eligible x funding rate of the personnel grant component">Funded / month</th>
               <th />
             </tr>
           </thead>
@@ -78,6 +86,7 @@ export function EmployeesTable({ employees, surchargePct, currency, onChange }: 
                   </td>
                   <td className="r mono">{money(cost, currency)}</td>
                   <td className="r mono">{money((cost * e.fundingEligiblePct) / 100, currency)}</td>
+                  <td className="r mono">{fundedText((cost * e.fundingEligiblePct) / 100)}</td>
                   <td><RemoveButton label={`Remove ${e.name}`} onClick={() => onChange(removeRow(employees, e.id))} /></td>
                 </tr>
               )
@@ -88,6 +97,7 @@ export function EmployeesTable({ employees, surchargePct, currency, onChange }: 
               <td colSpan={5}>Total when everyone is on board</td>
               <td className="r mono">{money(totalCost, currency)}</td>
               <td className="r mono">{money(totalEligible, currency)}</td>
+              <td className="r mono">{fundedText(totalEligible)}</td>
               <td />
             </tr>
           </tfoot>

@@ -27,17 +27,34 @@ export interface Employee {
   fundingEligiblePct: number
 }
 
+/**
+ * A block of eligible costs. Funding = eligible x ratePct; the rest is own
+ * contribution. Funding is split into grant (Zuschuss) and loan (Darlehen).
+ */
 export interface GrantComponent {
   id: string
   name: string
+  /** 'personnel': eligible costs derived from employees within the funding period. */
+  basis: 'personnel' | 'manual'
+  /** Eligible costs; only used when basis is 'manual'. */
   amount: number
   ratePct: number
+  /** Share of the funding paid as grant (Zuschuss); the rest is loan (Darlehen). */
+  grantSharePct: number
 }
+
+export type FundingKind = 'grant' | 'loan'
 
 export interface Tranche {
   id: string
+  kind: FundingKind
   month: number
   amount: number
+}
+
+export interface FundingPeriod {
+  fromMonth: number
+  toMonth: number
 }
 
 export interface FounderInjection {
@@ -52,6 +69,7 @@ export interface PlanState {
   settings: Settings
   costs: CostItem[]
   employees: Employee[]
+  fundingPeriod: FundingPeriod
   grantComponents: GrantComponent[]
   tranches: Tranche[]
   founderCash: FounderInjection[]
@@ -66,7 +84,10 @@ export interface MonthRow {
   /** Personnel cost per employee id (incl. employer surcharge). */
   personnelByEmployee: Record<string, number>
   eligiblePersonnel: number
+  /** Grant (Zuschuss) received. */
   grantIn: number
+  /** Loan (Darlehen) received. */
+  loanIn: number
   founderIn: number
   totalIn: number
   totalOut: number

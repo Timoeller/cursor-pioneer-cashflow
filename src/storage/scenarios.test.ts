@@ -31,6 +31,16 @@ describe('scenario store', () => {
     expect(s.employees[0]).toMatchObject({ id: 'x', monthlySalary: 100, endMonth: null })
     expect(s.costs.length).toBeGreaterThan(0)
   })
+
+  it('migrates grant components and tranches saved before the grant/loan split', () => {
+    const s = normalizeState({
+      grantComponents: [{ id: 'g', name: 'Old', amount: 1000, ratePct: 70 }],
+      tranches: [{ id: 't', month: 4, amount: 500 }],
+    })
+    expect(s.grantComponents[0]).toMatchObject({ id: 'g', basis: 'manual', amount: 1000, ratePct: 70, grantSharePct: 100 })
+    expect(s.tranches[0]).toMatchObject({ id: 't', kind: 'grant', month: 4, amount: 500 })
+    expect(s.fundingPeriod).toEqual({ fromMonth: 1, toMonth: 24 })
+  })
 })
 
 describe('autosaver', () => {
