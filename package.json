@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:rules": "npx --yes firebase-tools@latest emulators:exec --only firestore --project demo-cashflow 'vitest run --config vitest.rules.config.ts'",
     "emulators": "npx --yes firebase-tools@latest emulators:start --project demo-cashflow"
   },
   "dependencies": {

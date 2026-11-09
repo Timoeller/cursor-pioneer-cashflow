@@ -19,28 +19,27 @@ The grant, tranche and founder cash values that come pre-filled are examples; re
 - **Without signing in**, everything is saved in your browser (localStorage). Use *Export JSON* / *Import JSON* to back up or share a scenario.
 - **With Google sign-in**, data is saved to your account (Firebase Firestore) and loads on any device. You can keep several named scenarios (e.g. "Base case", "Grant delayed"); changes save automatically about a second after you stop typing. The first time you sign in, the data from your browser becomes your first scenario.
 
-Sign-in only appears once Firebase is configured (see below).
-
 ## One-time setup
 
 ### 1. GitHub Pages
 
 In the repository go to **Settings > Pages** and set **Source** to **GitHub Actions**. Every push to `main` then builds, tests and deploys the site (`.github/workflows/deploy.yml`).
 
-### 2. Firebase (for Google sign-in)
+### 2. Firebase (Google sign-in and Firestore)
 
-1. Go to the [Firebase console](https://console.firebase.google.com/), create a project (the free Spark plan is enough) and add a **Web app**. Note the config values `apiKey`, `authDomain`, `projectId` and `appId`.
-2. **Authentication > Sign-in method**: enable **Google**.
-3. **Authentication > Settings > Authorized domains**: add `timoeller.github.io`.
-4. **Firestore Database**: create a database (production mode), then open the **Rules** tab and paste the contents of [`firestore.rules`](firestore.rules). The rules make sure every user can only read and write their own data.
-5. In GitHub go to **Settings > Secrets and variables > Actions > Variables** and add these repository variables:
-   - `VITE_FIREBASE_API_KEY`
-   - `VITE_FIREBASE_AUTH_DOMAIN`
-   - `VITE_FIREBASE_PROJECT_ID`
-   - `VITE_FIREBASE_APP_ID`
+The app uses the Firebase project `pioneer-cashflow` (web app `1:706818236179:web:782aa8e32151f71788c4e6`). Its public web config is in [`src/firebase.ts`](src/firebase.ts), and [`firebase.json`](firebase.json) / [`.firebaserc`](.firebaserc) describe the backend:
 
-   These values are not secret (they are shipped to every browser); the Firestore rules are what protect the data.
-6. Re-run the deploy workflow (Actions > Deploy to GitHub Pages > Run workflow) or push to `main`.
+- **Authentication**: Google sign-in is enabled. Authorized domains include `timoeller.github.io` and `localhost`.
+- **Firestore**: the default database (Standard edition) is in `europe-west10` (Berlin) with delete protection on. [`firestore.rules`](firestore.rules) lets every signed-in user read and write only their own scenarios (`users/{uid}/scenarios/...`) and checks the shape and size of every write.
+
+After changing the rules or the auth config, deploy them with the Firebase CLI:
+
+```bash
+npx -y firebase-tools@latest login
+npx -y firebase-tools@latest deploy --only auth,firestore
+```
+
+Authorized domains are not part of `firebase.json`; add new ones in the Firebase console under **Authentication > Settings > Authorized domains**.
 
 ## Local development
 
@@ -48,6 +47,7 @@ In the repository go to **Settings > Pages** and set **Source** to **GitHub Acti
 npm install
 npm run dev        # http://localhost:5173/cursor-pioneer-cashflow/
 npm test           # unit tests for the cash flow calculation and saving logic
+npm run test:rules # Firestore security rules tests against the emulator (needs Java)
 npm run lint
 npm run build
 ```
@@ -66,7 +66,7 @@ EOF
 npm run dev
 ```
 
-To use your real Firebase project locally, copy `.env.example` to `.env.local` and fill in the values.
+`npm run dev` uses the real `pioneer-cashflow` project by default. Variables in `.env.local` (see `.env.example`) override the built-in config.
 
 ## How the numbers are calculated
 
