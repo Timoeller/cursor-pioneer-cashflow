@@ -2,12 +2,14 @@
   "auth": {
     "providers": {
       "googleSignIn": {
-        "oAuthBrandDisplayName": "Pioneer Cash Flow"
+        "oAuthBrandDisplayName": "Pioneer Cash Flow",
+        "supportEmail": "moeller.timo@gmail.com"
       }
     }
   },
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
   "emulators": {
     "auth": { "port": 9099 },
