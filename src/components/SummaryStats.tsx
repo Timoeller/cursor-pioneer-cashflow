@@ -19,6 +19,7 @@ function Stat({ label, value, sub, tone }: { label: string; value: string; sub?:
 
 export function SummaryStats({ summary: s, settings }: Props) {
   const cur = settings.currency
+  const f = s.funding
   const horizon = settings.horizonMonths
   const runwayText =
     s.firstNegativeMonth == null
@@ -49,11 +50,30 @@ export function SummaryStats({ summary: s, settings }: Props) {
       <Stat label="Total costs" value={money(s.totalOut, cur)} sub={`personnel ${money(s.personnel, cur)} · other ${money(s.otherCosts, cur)}`} />
       <Stat label="Avg. monthly burn" value={money(s.avgMonthlyBurn, cur)} sub={`net of inflows: ${money(s.avgNetBurn, cur)}`} />
       <Stat
-        label="Grant"
-        value={money(s.grantTotal, cur)}
-        sub={`${money(s.grantReceived, cur)} received within horizon (${s.grantTotal > 0 ? pct(s.grantReceived / s.grantTotal) : '0 %'})`}
+        label="Grant (Zuschuss)"
+        value={money(f.grant, cur)}
+        sub={`${money(s.grantReceived, cur)} received within horizon`}
       />
-      <Stat label="Grant share of costs" value={pct(s.grantShareOfCosts)} sub="grant received / total costs" />
+      <Stat
+        label="Loan (Darlehen)"
+        value={money(f.loan, cur)}
+        sub={`${money(s.loanReceived, cur)} received within horizon · must be repaid`}
+      />
+      <Stat
+        label="Own contribution required"
+        value={money(f.own, cur)}
+        sub={
+          f.own > 0
+            ? `${pct(f.own / (f.eligible || 1))} of eligible costs · founder cash covers ${pct(Math.min(1, s.founderTotal / f.own))}`
+            : 'no own contribution needed'
+        }
+        tone={f.own > 0 && s.founderTotal < f.own ? 'warn' : undefined}
+      />
+      <Stat
+        label="Funding share of costs"
+        value={pct(s.fundingShareOfCosts)}
+        sub={`grant + loan received / total costs · funding ${money(f.funding, cur)} on ${money(f.eligible, cur)} eligible`}
+      />
       <Stat label="Founder cash" value={money(s.founderTotal, cur)} sub="received within horizon" />
       <Stat
         label="Funding-eligible personnel"

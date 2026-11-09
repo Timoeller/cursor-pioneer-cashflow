@@ -15,7 +15,8 @@ function toCsv(rows: MonthRow[], state: PlanState): string {
     'Label',
     'Opening balance',
     'Founder cash',
-    'Grant',
+    'Grant (Zuschuss)',
+    'Loan (Darlehen)',
     'Total in',
     ...state.employees.map((e) => `Personnel: ${e.name}`),
     'Personnel total',
@@ -33,6 +34,7 @@ function toCsv(rows: MonthRow[], state: PlanState): string {
     r2(r.openingBalance),
     r2(r.founderIn),
     r2(r.grantIn),
+    r2(r.loanIn),
     r2(r.totalIn),
     ...state.employees.map((e) => r2(r.personnelByEmployee[e.id] ?? 0)),
     r2(r.personnel),
@@ -81,6 +83,7 @@ export function MonthlyTable({ rows, state }: Props) {
               <th className="r">Opening</th>
               <th className="r">Founder cash</th>
               <th className="r">Grant</th>
+              <th className="r">Loan</th>
               <th className="r">Total in</th>
               <th className="r">Personnel</th>
               <th className="r">Eligible pers.</th>
@@ -104,6 +107,7 @@ export function MonthlyTable({ rows, state }: Props) {
                     <td className="r mono">{m(r.openingBalance)}</td>
                     <td className="r mono">{r.founderIn ? m(r.founderIn) : ''}</td>
                     <td className="r mono">{r.grantIn ? m(r.grantIn) : ''}</td>
+                    <td className="r mono">{r.loanIn ? m(r.loanIn) : ''}</td>
                     <td className="r mono">{m(r.totalIn)}</td>
                     <td className="r mono">{m(r.personnel)}</td>
                     <td className="r mono muted">{m(r.eligiblePersonnel)}</td>
@@ -123,6 +127,7 @@ export function MonthlyTable({ rows, state }: Props) {
                       <td />
                       <td className="r mono">{m(year.founderIn)}</td>
                       <td className="r mono">{m(year.grantIn)}</td>
+                      <td className="r mono">{m(year.loanIn)}</td>
                       <td className="r mono">{m(year.totalIn)}</td>
                       <td className="r mono">{m(year.personnel)}</td>
                       <td />

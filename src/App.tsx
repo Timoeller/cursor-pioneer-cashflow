@@ -10,7 +10,7 @@ import { MonthlyTable } from './components/MonthlyTable'
 import { SettingsPanel } from './components/SettingsPanel'
 import { SummaryStats } from './components/SummaryStats'
 import { createInitialState } from './data/initialState'
-import { computeCashflow, summarize } from './model/cashflow'
+import { computeCashflow, personnelFundingRatePct, summarize } from './model/cashflow'
 import type { PlanState } from './model/types'
 import { loadLocal, saveLocal } from './storage/local'
 import { useCloudSync } from './storage/useCloudSync'
@@ -69,9 +69,9 @@ export default function App() {
           </nav>
           {tab === 'costs' && <CostsTable costs={state.costs} currency={state.settings.currency} onChange={patch('costs')} />}
           {tab === 'employees' && (
-            <EmployeesTable employees={state.employees} surchargePct={state.settings.employerSurchargePct} currency={state.settings.currency} onChange={patch('employees')} />
+            <EmployeesTable employees={state.employees} surchargePct={state.settings.employerSurchargePct} fundingRatePct={personnelFundingRatePct(state)} currency={state.settings.currency} onChange={patch('employees')} />
           )}
-          {tab === 'grant' && <GrantSection state={state} onComponentsChange={patch('grantComponents')} onTranchesChange={patch('tranches')} />}
+          {tab === 'grant' && <GrantSection state={state} onComponentsChange={patch('grantComponents')} onTranchesChange={patch('tranches')} onPeriodChange={patch('fundingPeriod')} />}
           {tab === 'founders' && <FounderCashTable founderCash={state.founderCash} settings={state.settings} onChange={patch('founderCash')} />}
           {tab === 'settings' && <SettingsPanel settings={state.settings} onChange={patch('settings')} />}
         </section>
