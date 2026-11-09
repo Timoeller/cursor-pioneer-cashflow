@@ -1,9 +1,65 @@
 rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users/{uid}/scenarios
+// Document ID: auto-generated
+// Fields:
+//   - name: string (required, 1-200 chars) - scenario name shown in the picker
+//   - state: map (required) - the PlanState from src/model/types.ts:
+//       version: 1, settings: map, and the lists costs, employees,
+//       grantComponents, tranches, founderCash (each at most 500 entries)
+//   - updatedAt: timestamp (required, always the server time of the write)
+//
+// Only the user whose uid is in the path can read or write their scenarios.
+// Nothing else in the database is readable or writable.
+//
+// ===============================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Each signed-in user can only read and write their own scenarios.
-    match /users/{uid}/{doc=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidList(list) {
+      return list is list && list.size() <= 500;
+    }
+
+    function isValidPlanState(state) {
+      return state is map
+        && state.keys().hasAll(['version', 'settings', 'costs', 'employees', 'grantComponents', 'tranches', 'founderCash'])
+        && state.keys().hasOnly(['version', 'settings', 'costs', 'employees', 'grantComponents', 'tranches', 'founderCash'])
+        && state.version == 1
+        && state.settings is map
+        && state.settings.size() <= 50
+        && isValidList(state.costs)
+        && isValidList(state.employees)
+        && isValidList(state.grantComponents)
+        && isValidList(state.tranches)
+        && isValidList(state.founderCash);
+    }
+
+    function isValidScenario(data) {
+      return data.keys().hasAll(['name', 'state', 'updatedAt'])
+        && data.keys().hasOnly(['name', 'state', 'updatedAt'])
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 200
+        && isValidPlanState(data.state)
+        && data.updatedAt == request.time;
+    }
+
+    match /users/{userId}/scenarios/{scenarioId} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidScenario(request.resource.data);
     }
   }
 }
