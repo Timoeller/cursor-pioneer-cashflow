@@ -1,5 +1,5 @@
 import { createInitialState } from '../data/initialState'
-import type { PlanState } from '../model/types'
+import type { CostItem, Employee, PlanState } from '../model/types'
 
 const KEY = 'pioneer-cashflow:state'
 
@@ -16,8 +16,8 @@ export function normalizeState(raw: unknown): PlanState {
   return {
     version: 1,
     settings: { ...base.settings, ...(r.settings ?? {}) },
-    costs: arr(r.costs, base.costs).map((c) => ({ ...base.costs[0], comment: '', endMonth: null, ...c })),
-    employees: arr(r.employees, base.employees).map((e) => ({ ...base.employees[0], endMonth: null, ...e })),
+    costs: arr<Partial<CostItem>>(r.costs, base.costs).map((c) => ({ ...base.costs[0], comment: '', endMonth: null, ...c })),
+    employees: arr<Partial<Employee>>(r.employees, base.employees).map((e) => ({ ...base.employees[0], endMonth: null, ...e })),
     grantComponents: arr(r.grantComponents, base.grantComponents),
     tranches: arr(r.tranches, base.tranches),
     founderCash: arr(r.founderCash, base.founderCash),
