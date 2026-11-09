@@ -1,6 +1,6 @@
 # Pioneer Cash Flow
 
-A simple cash flow planner for an early-stage startup. It runs entirely in the browser and is hosted on GitHub Pages:
+A simple cash flow planner for an early-stage startup. It runs in the browser, is hosted on GitHub Pages and stores its data in Firebase:
 
 **https://timoeller.github.io/cursor-pioneer-cashflow/**
 
@@ -14,10 +14,13 @@ A simple cash flow planner for an early-stage startup. It runs entirely in the b
 
 The grant, tranche and founder cash values that come pre-filled are examples; replace them with your own.
 
-## Saving your data
+## Access, teams and saving
 
-- **Without signing in**, everything is saved in your browser (localStorage). Use *Export JSON* / *Import JSON* to back up or share a scenario.
-- **With Google sign-in**, data is saved to your account (Firebase Firestore) and loads on any device. You can keep several named scenarios (e.g. "Base case", "Grant delayed"); changes save automatically about a second after you stop typing. The first time you sign in, the data from your browser becomes your first scenario.
+- **Sign-in is required.** Visitors only see a *Sign in with Google* page. After signing in for the first time, an account waits for approval and still sees no data.
+- **Admins** get an *Admin* tab. It lists everyone who has signed in (people waiting for approval first). Choosing a team for someone gives them access; *Remove access* takes it away again. Admins can create and rename teams and make other users admins. `moeller.timo@gmail.com` is always an admin (set in `src/firebase.ts` and `firestore.rules`).
+- **Teams share data.** Everyone in a team sees and edits the same named scenarios (e.g. "Base case", "Grant delayed"). Changes save automatically about a second after you stop typing and show up for teammates without reloading. If two people edit the same scenario at the same moment, the last save wins.
+- Scenarios saved per person before teams existed are offered once with a *Move to <team>* button.
+- Use *Export JSON* / *Import JSON* to back up or copy a scenario.
 
 ## One-time setup
 
@@ -30,7 +33,10 @@ In the repository go to **Settings > Pages** and set **Source** to **GitHub Acti
 The app uses the Firebase project `pioneer-cashflow` (web app `1:706818236179:web:782aa8e32151f71788c4e6`). Its public web config is in [`src/firebase.ts`](src/firebase.ts), and [`firebase.json`](firebase.json) / [`.firebaserc`](.firebaserc) describe the backend:
 
 - **Authentication**: Google sign-in is enabled. Authorized domains include `timoeller.github.io` and `localhost`.
-- **Firestore**: the default database (Standard edition) is in `europe-west10` (Berlin) with delete protection on. [`firestore.rules`](firestore.rules) lets every signed-in user read and write only their own scenarios (`users/{uid}/scenarios/...`) and checks the shape and size of every write.
+- **Firestore**: the default database (Standard edition) is in `europe-west10` (Berlin) with delete protection on. [`firestore.rules`](firestore.rules) enforces the access model above:
+  - `users/{uid}`: profile each user writes when they sign in; readable by them and admins.
+  - `members/{uid}`: team and role (`member` or `admin`); only admins can write it, so nobody can approve themselves.
+  - `teams/{teamId}` and `teams/{teamId}/scenarios/...`: only members of that team can read and write the scenarios. Every write is checked for shape and size.
 
 After changing the rules or the auth config, deploy them with the Firebase CLI:
 
