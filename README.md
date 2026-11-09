@@ -30,7 +30,7 @@ In the repository go to **Settings > Pages** and set **Source** to **GitHub Acti
 The app uses the Firebase project `pioneer-cashflow` (web app `1:706818236179:web:782aa8e32151f71788c4e6`). Its public web config is in [`src/firebase.ts`](src/firebase.ts), and [`firebase.json`](firebase.json) / [`.firebaserc`](.firebaserc) describe the backend:
 
 - **Authentication**: Google sign-in is enabled. Authorized domains include `timoeller.github.io` and `localhost`.
-- **Firestore**: [`firestore.rules`](firestore.rules) lets every signed-in user read and write only their own data (`users/{uid}/...`).
+- **Firestore**: the default database (Standard edition) is in `europe-west10` (Berlin) with delete protection on. [`firestore.rules`](firestore.rules) lets every signed-in user read and write only their own scenarios (`users/{uid}/scenarios/...`) and checks the shape and size of every write.
 
 After changing the rules or the auth config, deploy them with the Firebase CLI:
 
@@ -47,6 +47,7 @@ Authorized domains are not part of `firebase.json`; add new ones in the Firebase
 npm install
 npm run dev        # http://localhost:5173/cursor-pioneer-cashflow/
 npm test           # unit tests for the cash flow calculation and saving logic
+npm run test:rules # Firestore security rules tests against the emulator (needs Java)
 npm run lint
 npm run build
 ```
