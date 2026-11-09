@@ -4,22 +4,48 @@ rules_version = '2';
 // Assumed Data Model
 // ===============================================================
 //
-// Collection: users/{uid}/scenarios
-// Document ID: auto-generated
-// Fields:
-//   - name: string (required, 1-200 chars) - scenario name shown in the picker
+// Collection: users            Document ID: Firebase Auth uid
+//   Written by the user themselves when they sign in ("registration").
+//   - email: string (required, must equal the verified email of the signed-in user)
+//   - displayName: string (required, 0-200 chars)
+//   - photoURL: string (required, 0-2000 chars, may be empty)
+//   - createdAt: timestamp (required, server time on create, immutable)
+//
+// Collection: members          Document ID: Firebase Auth uid
+//   Written by admins only. A user has access to the app only while this document exists.
+//   - teamId: string (required, id of an existing document in teams)
+//   - role: string (required, 'member' or 'admin')
+//   - updatedAt: timestamp (required, server time of the write)
+//
+// Collection: teams            Document ID: auto-generated
+//   Written by admins only.
+//   - name: string (required, 1-100 chars)
+//   - createdAt: timestamp (required, server time on create, immutable)
+//
+// Collection: teams/{teamId}/scenarios   Document ID: auto-generated
+//   Shared by all members of the team.
+//   - name: string (required, 1-200 chars)
 //   - state: map (required) - the PlanState from src/model/types.ts:
 //       version: 1, settings: map, fundingPeriod: map, and the lists costs, employees,
 //       grantComponents, tranches, founderCash (each at most 500 entries)
-//   - updatedAt: timestamp (required, always the server time of the write)
+//   - updatedAt: timestamp (required, server time of the write)
 //
-// Only the user whose uid is in the path can read or write their scenarios.
-// Nothing else in the database is readable or writable.
+// Collection: users/{uid}/scenarios   (legacy, from before teams existed)
+//   Same fields as team scenarios. The owner can only read and delete them,
+//   so the app can move them into their team.
+//
+// Admins: the bootstrap admin emails below (verified Google accounts), plus
+// everyone whose members document has role 'admin'. Only admins can write
+// members documents, so nobody can grant themselves access or a role.
 //
 // ===============================================================
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ------------------------------------------------------------
+    // Helper functions
+    // ------------------------------------------------------------
 
     function isAuthenticated() {
       return request.auth != null;
@@ -29,8 +55,64 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isBootstrapAdmin() {
+      return isAuthenticated()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['moeller.timo@gmail.com'];
+    }
+
+    function membership() {
+      return get(/databases/$(database)/documents/members/$(request.auth.uid));
+    }
+
+    function hasMembership() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/members/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return isBootstrapAdmin() || (hasMembership() && membership().data.role == 'admin');
+    }
+
+    function isTeamMember(teamId) {
+      return hasMembership() && membership().data.teamId == teamId;
+    }
+
+    function isValidString(value, minLen, maxLen) {
+      return value is string && value.size() >= minLen && value.size() <= maxLen;
+    }
+
     function isValidList(list) {
       return list is list && list.size() <= 500;
+    }
+
+    // ------------------------------------------------------------
+    // Domain validators (used on both create and update)
+    // ------------------------------------------------------------
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['email', 'displayName', 'photoURL', 'createdAt'])
+        && data.keys().hasOnly(['email', 'displayName', 'photoURL', 'createdAt'])
+        && request.auth.token.email_verified == true
+        && data.email == request.auth.token.email
+        && isValidString(data.displayName, 0, 200)
+        && isValidString(data.photoURL, 0, 2000)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidMembership(data) {
+      return data.keys().hasAll(['teamId', 'role', 'updatedAt'])
+        && data.keys().hasOnly(['teamId', 'role', 'updatedAt'])
+        && isValidString(data.teamId, 1, 100)
+        && exists(/databases/$(database)/documents/teams/$(data.teamId))
+        && data.role in ['member', 'admin']
+        && data.updatedAt == request.time;
+    }
+
+    function isValidTeam(data) {
+      return data.keys().hasAll(['name', 'createdAt'])
+        && data.keys().hasOnly(['name', 'createdAt'])
+        && isValidString(data.name, 1, 100)
+        && data.createdAt is timestamp;
     }
 
     function isValidPlanState(state) {
@@ -52,16 +134,48 @@ service cloud.firestore {
     function isValidScenario(data) {
       return data.keys().hasAll(['name', 'state', 'updatedAt'])
         && data.keys().hasOnly(['name', 'state', 'updatedAt'])
-        && data.name is string
-        && data.name.size() >= 1
-        && data.name.size() <= 200
+        && isValidString(data.name, 1, 200)
         && isValidPlanState(data.state)
         && data.updatedAt == request.time;
     }
 
-    match /users/{userId}/scenarios/{scenarioId} {
-      allow read, delete: if isOwner(userId);
-      allow create, update: if isOwner(userId) && isValidScenario(request.resource.data);
+    // ------------------------------------------------------------
+    // Rules
+    // ------------------------------------------------------------
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId)
+        && isValidUserProfile(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(userId)
+        && isValidUserProfile(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      match /scenarios/{scenarioId} {
+        allow read, delete: if isOwner(userId);
+      }
+    }
+
+    match /members/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if isAdmin() && isValidMembership(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow read: if isAdmin() || isTeamMember(teamId);
+      allow create: if isAdmin()
+        && isValidTeam(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin()
+        && isValidTeam(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      match /scenarios/{scenarioId} {
+        allow read, delete: if isTeamMember(teamId);
+        allow create, update: if isTeamMember(teamId) && isValidScenario(request.resource.data);
+      }
     }
   }
 }
