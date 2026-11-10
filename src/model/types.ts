@@ -27,34 +27,34 @@ export interface Employee {
   fundingEligiblePct: number
 }
 
-/**
- * A block of eligible costs. Funding = eligible x ratePct; the rest is own
- * contribution. Funding is split into grant (Zuschuss) and loan (Darlehen).
- */
-export interface GrantComponent {
-  id: string
-  name: string
-  /** 'personnel': eligible costs derived from employees within the funding period. */
-  basis: 'personnel' | 'manual'
-  /** Eligible costs; only used when basis is 'manual'. */
-  amount: number
+/** How the grant covers costs. There is no loan component. */
+export interface FundingRules {
+  /** Share of fundable personnel costs the grant pays, e.g. 80. The rest is own contribution. */
   ratePct: number
-  /** Share of the funding paid as grant (Zuschuss); the rest is loan (Darlehen). */
-  grantSharePct: number
+  /**
+   * Additional (non-personnel) costs the grant covers, as a percentage of fundable
+   * personnel costs. The funding rate is not applied on top. E.g. 40.
+   */
+  additionalCostPct: number
+  fromMonth: number
+  toMonth: number
+  /** Paid each month as costs are covered. When false, cash arrives through tranches. */
+  payMonthly: boolean
 }
-
-export type FundingKind = 'grant' | 'loan'
 
 export interface Tranche {
   id: string
-  kind: FundingKind
   month: number
   amount: number
 }
 
-export interface FundingPeriod {
-  fromMonth: number
-  toMonth: number
+export interface RevenueItem {
+  id: string
+  name: string
+  amount: number
+  recurring: boolean
+  startMonth: number
+  endMonth: number | null
 }
 
 export interface FounderInjection {
@@ -69,10 +69,10 @@ export interface PlanState {
   settings: Settings
   costs: CostItem[]
   employees: Employee[]
-  fundingPeriod: FundingPeriod
-  grantComponents: GrantComponent[]
+  funding: FundingRules
   tranches: Tranche[]
   founderCash: FounderInjection[]
+  revenue: RevenueItem[]
 }
 
 export interface MonthRow {
@@ -83,11 +83,21 @@ export interface MonthRow {
   personnel: number
   /** Personnel cost per employee id (incl. employer surcharge). */
   personnelByEmployee: Record<string, number>
-  eligiblePersonnel: number
-  /** Grant (Zuschuss) received. */
+  /** Personnel cost x funding-eligible %. */
+  fundablePersonnel: number
+  /** Fundable personnel x funding rate. Zero outside the funding period. */
+  grantOnPersonnel: number
+  /** Fundable personnel x additional-cost rate. The funding rate is not applied. */
+  additionalAllowance: number
+  /** Additional costs the grant actually pays: the allowance, capped by real other costs. */
+  grantOnAdditional: number
+  /** grantOnPersonnel + grantOnAdditional. */
+  grantCovered: number
+  /** Costs the grant does not cover. Founders finance this; revenue reduces the cash needed. */
+  founderBorne: number
+  revenueIn: number
+  /** Grant cash received this month. */
   grantIn: number
-  /** Loan (Darlehen) received. */
-  loanIn: number
   founderIn: number
   totalIn: number
   totalOut: number

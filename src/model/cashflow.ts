@@ -1,4 +1,4 @@
-import type { CostItem, Employee, FundingKind, GrantComponent, MonthRow, PlanState, Tranche } from './types'
+import type { CostItem, Employee, MonthRow, PlanState, RevenueItem } from './types'
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
 
@@ -12,6 +12,12 @@ export function costInMonth(c: CostItem, month: number): number {
   return month === num(c.startMonth) ? amount : 0
 }
 
+export function revenueInMonth(r: RevenueItem, month: number): number {
+  const amount = num(r.amount)
+  if (r.recurring) return isActive(num(r.startMonth), r.endMonth, month) ? amount : 0
+  return month === num(r.startMonth) ? amount : 0
+}
+
 export function employeeMonthlyCost(e: Employee, surchargePct: number): number {
   return num(e.monthlySalary) * (1 + num(surchargePct) / 100)
 }
@@ -20,86 +26,50 @@ export function personnelInMonth(e: Employee, month: number, surchargePct: numbe
   return isActive(num(e.startMonth), e.endMonth, month) ? employeeMonthlyCost(e, surchargePct) : 0
 }
 
-/** Funding-eligible personnel cost (cost x eligible %) summed over months [from, to]. */
-export function eligiblePersonnelBetween(state: PlanState, from: number, to: number): number {
-  let total = 0
-  for (let m = from; m <= to; m++) {
-    for (const e of state.employees) {
-      total += (personnelInMonth(e, m, state.settings.employerSurchargePct) * num(e.fundingEligiblePct)) / 100
-    }
-  }
-  return total
+function inFundingPeriod(state: PlanState, month: number): boolean {
+  return month >= num(state.funding.fromMonth) && month <= num(state.funding.toMonth)
 }
 
-export interface ComponentFunding {
+export interface EmployeeFunding {
   id: string
-  name: string
-  eligible: number
-  ratePct: number
-  /** eligible x rate */
-  funding: number
-  /** Zuschuss */
+  /** Employer cost inside the funding period. */
+  cost: number
+  /** cost x funding-eligible %. */
+  fundable: number
+  /** fundable x funding rate. */
   grant: number
-  /** Darlehen */
-  loan: number
-  /** Eigenanteil: eligible - funding */
-  own: number
+  /** fundable x additional-cost rate. The funding rate is not applied. */
+  additional: number
+  /** cost - grant. The part of this person's cost the founders finance. */
+  founder: number
 }
 
-export interface FundingBreakdown {
-  components: ComponentFunding[]
-  eligible: number
-  funding: number
-  grant: number
-  loan: number
-  own: number
-  /** Scheduled tranches per kind. */
-  scheduledGrant: number
-  scheduledLoan: number
-}
-
-export function componentEligible(state: PlanState, g: GrantComponent): number {
-  if (g.basis === 'personnel') {
-    return eligiblePersonnelBetween(state, num(state.fundingPeriod.fromMonth), num(state.fundingPeriod.toMonth))
-  }
-  return num(g.amount)
-}
-
-export function fundingBreakdown(state: PlanState): FundingBreakdown {
-  const components = state.grantComponents.map((g): ComponentFunding => {
-    const eligible = componentEligible(state, g)
-    const funding = (eligible * num(g.ratePct)) / 100
-    const grant = (funding * num(g.grantSharePct)) / 100
-    return { id: g.id, name: g.name, eligible, ratePct: num(g.ratePct), funding, grant, loan: funding - grant, own: eligible - funding }
+/** Per employee, summed over the funding period. */
+export function employeeFunding(state: PlanState): EmployeeFunding[] {
+  const { fromMonth, toMonth, ratePct, additionalCostPct } = state.funding
+  const surcharge = state.settings.employerSurchargePct
+  return state.employees.map((e) => {
+    let cost = 0
+    for (let m = num(fromMonth); m <= num(toMonth); m++) cost += personnelInMonth(e, m, surcharge)
+    const fundable = (cost * num(e.fundingEligiblePct)) / 100
+    const grant = (fundable * num(ratePct)) / 100
+    return {
+      id: e.id,
+      cost,
+      fundable,
+      grant,
+      additional: (fundable * num(additionalCostPct)) / 100,
+      founder: cost - grant,
+    }
   })
-  const sum = (f: (c: ComponentFunding) => number) => components.reduce((s, c) => s + f(c), 0)
-  const scheduled = (kind: FundingKind) => state.tranches.filter((t) => trancheKind(t) === kind).reduce((s, t) => s + num(t.amount), 0)
-  return {
-    components,
-    eligible: sum((c) => c.eligible),
-    funding: sum((c) => c.funding),
-    grant: sum((c) => c.grant),
-    loan: sum((c) => c.loan),
-    own: sum((c) => c.own),
-    scheduledGrant: scheduled('grant'),
-    scheduledLoan: scheduled('loan'),
-  }
-}
-
-export function trancheKind(t: Tranche): FundingKind {
-  return t.kind === 'loan' ? 'loan' : 'grant'
-}
-
-/** Funding rate of the first personnel-based component, used to show funding per employee. */
-export function personnelFundingRatePct(state: PlanState): number | null {
-  const g = state.grantComponents.find((c) => c.basis === 'personnel')
-  return g ? num(g.ratePct) : null
 }
 
 export function computeCashflow(state: PlanState): MonthRow[] {
   const rows: MonthRow[] = []
   const horizon = Math.max(1, Math.floor(num(state.settings.horizonMonths)))
   const surcharge = state.settings.employerSurchargePct
+  const rate = num(state.funding.ratePct) / 100
+  const additionalRate = num(state.funding.additionalCostPct) / 100
   let balance = num(state.settings.startingCash)
 
   for (let month = 1; month <= horizon; month++) {
@@ -113,21 +83,27 @@ export function computeCashflow(state: PlanState): MonthRow[] {
 
     const personnelByEmployee: Record<string, number> = {}
     let personnel = 0
-    let eligiblePersonnel = 0
+    let fundablePersonnel = 0
     for (const e of state.employees) {
       const v = personnelInMonth(e, month, surcharge)
       personnelByEmployee[e.id] = v
       personnel += v
-      eligiblePersonnel += (v * num(e.fundingEligiblePct)) / 100
+      fundablePersonnel += (v * num(e.fundingEligiblePct)) / 100
     }
 
-    const tranchesIn = (kind: FundingKind) =>
-      state.tranches.filter((t) => num(t.month) === month && trancheKind(t) === kind).reduce((s, t) => s + num(t.amount), 0)
-    const grantIn = tranchesIn('grant')
-    const loanIn = tranchesIn('loan')
-    const founderIn = state.founderCash.filter((f) => num(f.month) === month).reduce((s, f) => s + num(f.amount), 0)
-    const totalIn = grantIn + loanIn + founderIn
+    const funded = inFundingPeriod(state, month)
+    const grantOnPersonnel = funded ? fundablePersonnel * rate : 0
+    const additionalAllowance = funded ? fundablePersonnel * additionalRate : 0
+    const grantOnAdditional = funded ? Math.min(otherCosts, additionalAllowance) : 0
+    const grantCovered = grantOnPersonnel + grantOnAdditional
     const totalOut = otherCosts + personnel
+    const founderBorne = totalOut - grantCovered
+
+    const revenueIn = state.revenue.reduce((s, r) => s + revenueInMonth(r, month), 0)
+    const trancheIn = state.tranches.filter((t) => num(t.month) === month).reduce((s, t) => s + num(t.amount), 0)
+    const grantIn = state.funding.payMonthly ? grantCovered : trancheIn
+    const founderIn = state.founderCash.filter((f) => num(f.month) === month).reduce((s, f) => s + num(f.amount), 0)
+    const totalIn = grantIn + founderIn + revenueIn
     const net = totalIn - totalOut
     const openingBalance = balance
     balance += net
@@ -138,9 +114,14 @@ export function computeCashflow(state: PlanState): MonthRow[] {
       otherCosts,
       personnel,
       personnelByEmployee,
-      eligiblePersonnel,
+      fundablePersonnel,
+      grantOnPersonnel,
+      additionalAllowance,
+      grantOnAdditional,
+      grantCovered,
+      founderBorne,
+      revenueIn,
       grantIn,
-      loanIn,
       founderIn,
       totalIn,
       totalOut,
@@ -156,10 +137,19 @@ export interface Summary {
   totalOut: number
   personnel: number
   otherCosts: number
-  eligiblePersonnel: number
-  funding: FundingBreakdown
+  fundablePersonnel: number
+  grantOnPersonnel: number
+  additionalAllowance: number
+  grantOnAdditional: number
+  /** What the grant pays for: personnel share + additional costs within the allowance. */
+  grantCovered: number
+  /** Costs the grant does not cover. */
+  founderBorne: number
+  revenue: number
+  /** founderBorne minus revenue: cash the founders still have to supply. Never negative. */
+  foundersNeed: number
   grantReceived: number
-  loanReceived: number
+  trancheTotal: number
   founderTotal: number
   totalIn: number
   avgMonthlyBurn: number
@@ -168,17 +158,14 @@ export interface Summary {
   minBalanceMonth: number
   endBalance: number
   firstNegativeMonth: number | null
-  /** Months covered before the balance first goes negative. */
   runwayMonths: number
-  /** (grant + loan received) / total costs */
-  fundingShareOfCosts: number
 }
 
 export function summarize(state: PlanState, rows: MonthRow[]): Summary {
   const sum = (f: (r: MonthRow) => number) => rows.reduce((s, r) => s + f(r), 0)
   const totalOut = sum((r) => r.totalOut)
-  const grantReceived = sum((r) => r.grantIn)
-  const loanReceived = sum((r) => r.loanIn)
+  const founderBorne = sum((r) => r.founderBorne)
+  const revenue = sum((r) => r.revenueIn)
   let minBalance = num(state.settings.startingCash)
   let minBalanceMonth = 0
   let firstNegativeMonth: number | null = null
@@ -194,10 +181,16 @@ export function summarize(state: PlanState, rows: MonthRow[]): Summary {
     totalOut,
     personnel: sum((r) => r.personnel),
     otherCosts: sum((r) => r.otherCosts),
-    eligiblePersonnel: sum((r) => r.eligiblePersonnel),
-    funding: fundingBreakdown(state),
-    grantReceived,
-    loanReceived,
+    fundablePersonnel: sum((r) => r.fundablePersonnel),
+    grantOnPersonnel: sum((r) => r.grantOnPersonnel),
+    additionalAllowance: sum((r) => r.additionalAllowance),
+    grantOnAdditional: sum((r) => r.grantOnAdditional),
+    grantCovered: sum((r) => r.grantCovered),
+    founderBorne,
+    revenue,
+    foundersNeed: Math.max(0, founderBorne - revenue),
+    grantReceived: sum((r) => r.grantIn),
+    trancheTotal: state.tranches.reduce((s, t) => s + num(t.amount), 0),
     founderTotal: sum((r) => r.founderIn),
     totalIn: sum((r) => r.totalIn),
     avgMonthlyBurn: totalOut / months,
@@ -207,7 +200,6 @@ export function summarize(state: PlanState, rows: MonthRow[]): Summary {
     endBalance: rows.length ? rows[rows.length - 1].closingBalance : num(state.settings.startingCash),
     firstNegativeMonth,
     runwayMonths: firstNegativeMonth == null ? rows.length : firstNegativeMonth - 1,
-    fundingShareOfCosts: totalOut > 0 ? (grantReceived + loanReceived) / totalOut : 0,
   }
 }
 
@@ -217,8 +209,10 @@ export interface YearRow {
   toMonth: number
   otherCosts: number
   personnel: number
+  revenueIn: number
   grantIn: number
-  loanIn: number
+  grantCovered: number
+  founderBorne: number
   founderIn: number
   totalIn: number
   totalOut: number
@@ -232,14 +226,31 @@ export function yearlyTotals(rows: MonthRow[]): YearRow[] {
     const year = Math.ceil(r.month / 12)
     let y = years[year - 1]
     if (!y) {
-      y = { year, fromMonth: r.month, toMonth: r.month, otherCosts: 0, personnel: 0, grantIn: 0, loanIn: 0, founderIn: 0, totalIn: 0, totalOut: 0, net: 0, closingBalance: 0 }
+      y = {
+        year,
+        fromMonth: r.month,
+        toMonth: r.month,
+        otherCosts: 0,
+        personnel: 0,
+        revenueIn: 0,
+        grantIn: 0,
+        grantCovered: 0,
+        founderBorne: 0,
+        founderIn: 0,
+        totalIn: 0,
+        totalOut: 0,
+        net: 0,
+        closingBalance: 0,
+      }
       years.push(y)
     }
     y.toMonth = r.month
     y.otherCosts += r.otherCosts
     y.personnel += r.personnel
+    y.revenueIn += r.revenueIn
     y.grantIn += r.grantIn
-    y.loanIn += r.loanIn
+    y.grantCovered += r.grantCovered
+    y.founderBorne += r.founderBorne
     y.founderIn += r.founderIn
     y.totalIn += r.totalIn
     y.totalOut += r.totalOut

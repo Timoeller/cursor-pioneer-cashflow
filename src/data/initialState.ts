@@ -1,4 +1,3 @@
-import { fundingBreakdown } from '../model/cashflow'
 import type { CostItem, Employee, PlanState } from '../model/types'
 
 /** Cost lines from costs_pioneer.xlsx (sheet "Spend"), excluding founder salaries. */
@@ -29,19 +28,6 @@ const founders: Employee[] = [1, 2, 3].map((n) => ({
 }))
 
 export function createInitialState(): PlanState {
-  const state = baseState()
-  const f = fundingBreakdown(state)
-  const third = Math.round(f.grant / 3)
-  state.tranches = [
-    { id: 't-1', kind: 'grant', month: 4, amount: third },
-    { id: 't-2', kind: 'grant', month: 12, amount: third },
-    { id: 't-3', kind: 'grant', month: 20, amount: Math.round(f.grant) - 2 * third },
-    { id: 't-4', kind: 'loan', month: 4, amount: Math.round(f.loan) },
-  ]
-  return state
-}
-
-function baseState(): PlanState {
   return {
     version: 1,
     settings: {
@@ -53,12 +39,13 @@ function baseState(): PlanState {
     },
     costs: initialCosts.map((c) => ({ ...c })),
     employees: founders.map((e) => ({ ...e })),
-    fundingPeriod: { fromMonth: 1, toMonth: 24 },
-    grantComponents: [
-      { id: 'g-personnel', name: 'Personnel costs', basis: 'personnel', amount: 0, ratePct: 80, grantSharePct: 100 },
-      { id: 'g-material', name: 'Investments & material (example)', basis: 'manual', amount: 50000, ratePct: 80, grantSharePct: 0 },
+    funding: { ratePct: 80, additionalCostPct: 40, fromMonth: 1, toMonth: 24, payMonthly: true },
+    tranches: [
+      { id: 't-1', month: 4, amount: 150000 },
+      { id: 't-2', month: 12, amount: 150000 },
+      { id: 't-3', month: 20, amount: 150000 },
     ],
-    tranches: [],
     founderCash: [1, 2, 3].map((n) => ({ id: `f-${n}`, founder: `Founder ${n}`, month: 1, amount: 25000 })),
+    revenue: [],
   }
 }
