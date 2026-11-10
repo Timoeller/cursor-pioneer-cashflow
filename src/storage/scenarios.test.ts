@@ -32,14 +32,16 @@ describe('scenario store', () => {
     expect(s.costs.length).toBeGreaterThan(0)
   })
 
-  it('migrates grant components and tranches saved before the grant/loan split', () => {
+  it('migrates scenarios saved with the old grant components', () => {
     const s = normalizeState({
-      grantComponents: [{ id: 'g', name: 'Old', amount: 1000, ratePct: 70 }],
-      tranches: [{ id: 't', month: 4, amount: 500 }],
+      fundingPeriod: { fromMonth: 3, toMonth: 18 },
+      grantComponents: [{ id: 'p', basis: 'personnel', ratePct: 70, grantSharePct: 60 }],
+      tranches: [{ id: 't', month: 4, amount: 500, kind: 'loan' }],
     })
-    expect(s.grantComponents[0]).toMatchObject({ id: 'g', basis: 'manual', amount: 1000, ratePct: 70, grantSharePct: 100 })
-    expect(s.tranches[0]).toMatchObject({ id: 't', kind: 'grant', month: 4, amount: 500 })
-    expect(s.fundingPeriod).toEqual({ fromMonth: 1, toMonth: 24 })
+    expect(s.funding).toMatchObject({ ratePct: 70, additionalCostPct: 40, fromMonth: 3, toMonth: 18, payMonthly: true })
+    expect(s.tranches).toEqual([{ id: 't', month: 4, amount: 500 }])
+    expect(s.revenue).toEqual([])
+    expect('grantComponents' in s).toBe(false)
   })
 })
 

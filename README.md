@@ -8,9 +8,10 @@ A simple cash flow planner for an early-stage startup. It runs in the browser, i
 
 - **Costs**: starts with the cost lines from `costs_pioneer.xlsx`. Every line is editable: amount, monthly or one-off, multiplier, start and end month, comment. You can add or remove lines.
 - **Employees**: add as many people as you like, each with a gross monthly salary, a start month (month 1 = founding month) and an individual funding-eligible percentage. The employer surcharge (default 20 %) is a global setting. The three founders are pre-filled (8,000 € per month each incl. employer share, as in the spreadsheet).
-- **Grant funding**: several components of eligible costs, each with a funding rate (default 80 %). Funding = eligible costs x funding rate; the rest is the **own contribution** (Eigenanteil) you have to cover yourself. Each component's funding is split into a **grant** (Zuschuss) part and a **loan** (Darlehen) part. Eligible personnel costs come from the employees within the funding period: an employee who is 70 % funding-eligible counts with 70 % of their cost, of which 80 % is funded (70 % x 80 % = 56 %). The money arrives in tranches (type, payout month, amount); the tool warns when the tranches don't add up to the grant or loan.
+- **Revenue**: customer payments, each either monthly (with a start and end month) or one-time.
+- **Grant funding**: one funding rate (default 80 %) and one additional-cost rate (default 40 %). The grant pays the funding rate on the share of each employee's time that can be funded, so someone who costs 100 and is fundable 50 % of the time is covered for 40, and the founders finance 60. Additional costs are covered up to 40 % of the fundable personnel cost, and the funding rate is not applied to them. The whole grant amount is received and spent. By default it is paid in the month it covers the cost; you can switch to tranches.
 - **Founder cash**: money the founders put into the company, per founder and month.
-- **Results**: runway, lowest balance, cash still needed, burn rate, grant, loan, required own contribution and more; a balance chart; a cost breakdown; a month-by-month table with yearly subtotals and CSV export.
+- **Results**: when cash runs out, how much the founders still have to put in, the grant coverage and the burn rate; a balance chart; a cost breakdown; a month-by-month table with yearly subtotals and CSV export.
 
 The grant, tranche and founder cash values that come pre-filled are examples; replace them with your own.
 
@@ -78,10 +79,11 @@ npm run dev
 
 - Months are counted from founding: month 1 is the founding month. Setting a founding month in *Settings* adds calendar labels.
 - Recurring cost per month = amount x multiplier, from its start month to its end month (empty = forever). One-off costs are booked once, in their start month.
-- Personnel cost per month = gross salary x (1 + employer surcharge). The funding-eligible part = personnel cost x the employee's funding-eligible %.
-- Eligible costs per component = a fixed amount, or for personnel: sum over employees and months in the funding period of employer cost x funding-eligible %.
-- Funding = eligible costs x funding rate. Own contribution = eligible costs - funding.
-- Grant (Zuschuss) = funding x grant share; loan (Darlehen) = the rest. Cash arrives when the tranches are paid out. Loan repayments are not modelled yet.
-- Closing balance = opening balance + founder cash + grant tranches + loan tranches - costs - personnel.
+- Personnel cost per month = gross salary x (1 + employer surcharge). Fundable personnel = that cost x the employee's funding-eligible %.
+- Inside the funding period, the grant pays fundable personnel x funding rate. Founders finance the rest of the personnel cost. 1,000 of personnel funding at 80 % belongs to 1,250 of cost, so the founders put in 250.
+- Additional costs the grant covers = fundable personnel x additional-cost rate (default 40 %), capped by the actual other costs that month. The funding rate is not applied. At 50 % fundable time this is 40 % x 50 % = 20 % of the person's cost.
+- Grant cash arrives monthly, equal to what it covers, or on the tranche dates if you choose tranches.
+- Revenue is monthly between its start and end month, or once in its start month.
+- Closing balance = opening balance + founder cash + revenue + grant - costs.
 
 Note: the yearly total cell in the original spreadsheet (`SUM(F2:F13)`) leaves out HR tooling and insurances. The correct total is 408,420 € per year, which is what the tool shows for year 1.

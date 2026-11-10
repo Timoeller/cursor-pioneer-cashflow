@@ -166,7 +166,7 @@ describe('team scenarios (teams/{teamId}/scenarios)', () => {
       { ...validScenario(), updatedAt: new Date(0) },
       { ...validScenario(), state: { ...toPlain(createInitialState()), version: 2 } },
       { ...validScenario(), state: { ...toPlain(createInitialState()), costs: 'nope' } },
-      { ...validScenario(), state: { ...toPlain(createInitialState()), fundingPeriod: 'nope' } },
+      { ...validScenario(), state: { ...toPlain(createInitialState()), funding: 'nope' } },
       { ...validScenario(), state: { ...toPlain(createInitialState()), costs: Array(501).fill({}) } },
       { name: 'No state', updatedAt: serverTimestamp() },
     ]

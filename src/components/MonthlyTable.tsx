@@ -15,12 +15,17 @@ function toCsv(rows: MonthRow[], state: PlanState): string {
     'Label',
     'Opening balance',
     'Founder cash',
-    'Grant (Zuschuss)',
-    'Loan (Darlehen)',
+    'Revenue',
+    'Grant',
     'Total in',
     ...state.employees.map((e) => `Personnel: ${e.name}`),
     'Personnel total',
-    'Funding-eligible personnel',
+    'Fundable personnel',
+    'Grant on personnel',
+    'Additional cost allowance',
+    'Grant on additional costs',
+    'Grant covered',
+    'Founders finance',
     ...state.costs.map((c) => `Cost: ${c.name}`),
     'Other costs total',
     'Total out',
@@ -33,12 +38,17 @@ function toCsv(rows: MonthRow[], state: PlanState): string {
     monthLabel(r.month, state.settings.foundingMonth),
     r2(r.openingBalance),
     r2(r.founderIn),
+    r2(r.revenueIn),
     r2(r.grantIn),
-    r2(r.loanIn),
     r2(r.totalIn),
     ...state.employees.map((e) => r2(r.personnelByEmployee[e.id] ?? 0)),
     r2(r.personnel),
-    r2(r.eligiblePersonnel),
+    r2(r.fundablePersonnel),
+    r2(r.grantOnPersonnel),
+    r2(r.additionalAllowance),
+    r2(r.grantOnAdditional),
+    r2(r.grantCovered),
+    r2(r.founderBorne),
     ...state.costs.map((c) => r2(r.costs[c.id] ?? 0)),
     r2(r.otherCosts),
     r2(r.totalOut),
@@ -82,12 +92,13 @@ export function MonthlyTable({ rows, state }: Props) {
               <th>Month</th>
               <th className="r">Opening</th>
               <th className="r">Founder cash</th>
+              <th className="r">Revenue</th>
               <th className="r">Grant</th>
-              <th className="r">Loan</th>
               <th className="r">Total in</th>
               <th className="r">Personnel</th>
-              <th className="r">Eligible pers.</th>
               <th className="r">Other costs</th>
+              <th className="r">Grant covers</th>
+              <th className="r">Founders finance</th>
               {detailCols.map((c) => (
                 <th key={c.id} className="r detail">{c.name}</th>
               ))}
@@ -106,12 +117,13 @@ export function MonthlyTable({ rows, state }: Props) {
                     <td>{monthLabel(r.month, state.settings.foundingMonth)}</td>
                     <td className="r mono">{m(r.openingBalance)}</td>
                     <td className="r mono">{r.founderIn ? m(r.founderIn) : ''}</td>
+                    <td className="r mono">{r.revenueIn ? m(r.revenueIn) : ''}</td>
                     <td className="r mono">{r.grantIn ? m(r.grantIn) : ''}</td>
-                    <td className="r mono">{r.loanIn ? m(r.loanIn) : ''}</td>
                     <td className="r mono">{m(r.totalIn)}</td>
                     <td className="r mono">{m(r.personnel)}</td>
-                    <td className="r mono muted">{m(r.eligiblePersonnel)}</td>
                     <td className="r mono">{m(r.otherCosts)}</td>
+                    <td className="r mono">{m(r.grantCovered)}</td>
+                    <td className="r mono">{m(r.founderBorne)}</td>
                     {detailCols.map((c) => (
                       <td key={c.id} className="r mono detail">
                         {m(c.kind === 'e' ? r.personnelByEmployee[c.id] ?? 0 : r.costs[c.id] ?? 0)}
@@ -126,12 +138,13 @@ export function MonthlyTable({ rows, state }: Props) {
                       <td>Year {year.year} (M{year.fromMonth}–M{year.toMonth})</td>
                       <td />
                       <td className="r mono">{m(year.founderIn)}</td>
+                      <td className="r mono">{m(year.revenueIn)}</td>
                       <td className="r mono">{m(year.grantIn)}</td>
-                      <td className="r mono">{m(year.loanIn)}</td>
                       <td className="r mono">{m(year.totalIn)}</td>
                       <td className="r mono">{m(year.personnel)}</td>
-                      <td />
                       <td className="r mono">{m(year.otherCosts)}</td>
+                      <td className="r mono">{m(year.grantCovered)}</td>
+                      <td className="r mono">{m(year.founderBorne)}</td>
                       {detailCols.map((c) => (
                         <td key={c.id} className="detail" />
                       ))}

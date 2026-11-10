@@ -15,7 +15,7 @@ export function BalanceChart({ rows, settings }: Props) {
     balance: Math.round(r.closingBalance),
     founder: Math.round(r.founderIn),
     grant: Math.round(r.grantIn),
-    loan: Math.round(r.loanIn),
+    revenue: Math.round(r.revenueIn),
     out: -Math.round(r.totalOut),
   }))
   const max = Math.max(0, ...data.map((d) => d.balance))
@@ -57,8 +57,8 @@ export function BalanceChart({ rows, settings }: Props) {
             <Legend />
             <ReferenceLine y={0} stroke="var(--text)" strokeOpacity={0.5} />
             <Bar dataKey="founder" name="Founder cash" stackId="flow" fill="var(--founder)" />
-            <Bar dataKey="grant" name="Grant (Zuschuss)" stackId="flow" fill="var(--grant)" />
-            <Bar dataKey="loan" name="Loan (Darlehen)" stackId="flow" fill="var(--loan)" />
+            <Bar dataKey="revenue" name="Revenue" stackId="flow" fill="var(--revenue)" />
+            <Bar dataKey="grant" name="Grant" stackId="flow" fill="var(--grant)" />
             <Bar dataKey="out" name="Costs" stackId="flow" fill="var(--cost)" />
             <Area type="monotone" dataKey="balance" name="Balance" stroke="url(#balanceStroke)" strokeWidth={2.5} fill="url(#balanceFill)" dot={false} />
           </ComposedChart>

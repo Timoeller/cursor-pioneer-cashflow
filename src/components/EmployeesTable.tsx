@@ -8,21 +8,19 @@ import { NumberField, RemoveButton, TextField } from './fields'
 interface Props {
   employees: Employee[]
   surchargePct: number
-  /** Funding rate of the personnel grant component, if any. */
-  fundingRatePct: number | null
+  fundingRatePct: number
+  /** Additional costs the grant covers, as % of fundable personnel. */
+  additionalCostPct: number
   currency: string
   onChange: (employees: Employee[]) => void
 }
 
-export function EmployeesTable({ employees, surchargePct, fundingRatePct, currency, onChange }: Props) {
+export function EmployeesTable({ employees, surchargePct, fundingRatePct, additionalCostPct, currency, onChange }: Props) {
   const set = (id: string, patch: Partial<Employee>) => onChange(updateRow(employees, id, patch))
   const totalCost = employees.reduce((s, e) => s + employeeMonthlyCost(e, surchargePct), 0)
   const totalEligible = employees.reduce((s, e) => s + (employeeMonthlyCost(e, surchargePct) * e.fundingEligiblePct) / 100, 0)
-  const funded = (eligible: number) => (fundingRatePct == null ? null : (eligible * fundingRatePct) / 100)
-  const fundedText = (eligible: number) => {
-    const v = funded(eligible)
-    return v == null ? '-' : money(v, currency)
-  }
+  const grantOn = (eligible: number) => (eligible * fundingRatePct) / 100
+  const extraOn = (eligible: number) => (eligible * additionalCostPct) / 100
 
   return (
     <section className="card">
@@ -30,7 +28,7 @@ export function EmployeesTable({ employees, surchargePct, fundingRatePct, curren
         <div>
           <h2>Employees</h2>
           <p className="muted">
-            Gross monthly salary. Employer cost adds {surchargePct} % on top. Start month counts from founding (month 1). Funding-eligible % is the share of the person's cost that counts as eligible; the grant then funds {fundingRatePct ?? '-'} % of that.
+            Gross monthly salary. Employer cost adds {surchargePct} % on top. Start month counts from founding (month 1). The grant pays {fundingRatePct} % of the fundable share, and that share also creates an additional-cost budget of {additionalCostPct} %.
           </p>
         </div>
         <button
@@ -57,7 +55,8 @@ export function EmployeesTable({ employees, surchargePct, fundingRatePct, curren
               <th className="r">Funding-eligible %</th>
               <th className="r">Employer cost / month</th>
               <th className="r">Eligible / month</th>
-              <th className="r" title="Eligible x funding rate of the personnel grant component">Funded / month</th>
+              <th className="r" title="Eligible cost x funding rate">Grant / month</th>
+              <th className="r" title="Eligible cost x additional-cost rate. The funding rate is not applied.">Extra budget / month</th>
               <th />
             </tr>
           </thead>
@@ -86,7 +85,8 @@ export function EmployeesTable({ employees, surchargePct, fundingRatePct, curren
                   </td>
                   <td className="r mono">{money(cost, currency)}</td>
                   <td className="r mono">{money((cost * e.fundingEligiblePct) / 100, currency)}</td>
-                  <td className="r mono">{fundedText((cost * e.fundingEligiblePct) / 100)}</td>
+                  <td className="r mono">{money(grantOn((cost * e.fundingEligiblePct) / 100), currency)}</td>
+                  <td className="r mono">{money(extraOn((cost * e.fundingEligiblePct) / 100), currency)}</td>
                   <td><RemoveButton label={`Remove ${e.name}`} onClick={() => onChange(removeRow(employees, e.id))} /></td>
                 </tr>
               )
@@ -97,7 +97,8 @@ export function EmployeesTable({ employees, surchargePct, fundingRatePct, curren
               <td colSpan={5}>Total when everyone is on board</td>
               <td className="r mono">{money(totalCost, currency)}</td>
               <td className="r mono">{money(totalEligible, currency)}</td>
-              <td className="r mono">{fundedText(totalEligible)}</td>
+              <td className="r mono">{money(grantOn(totalEligible), currency)}</td>
+              <td className="r mono">{money(extraOn(totalEligible), currency)}</td>
               <td />
             </tr>
           </tfoot>

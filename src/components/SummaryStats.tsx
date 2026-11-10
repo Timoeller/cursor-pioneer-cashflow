@@ -19,7 +19,6 @@ function Stat({ label, value, sub, tone }: { label: string; value: string; sub?:
 
 export function SummaryStats({ summary: s, settings }: Props) {
   const cur = settings.currency
-  const f = s.funding
   const horizon = settings.horizonMonths
   const runwayText =
     s.firstNegativeMonth == null
@@ -50,35 +49,25 @@ export function SummaryStats({ summary: s, settings }: Props) {
       <Stat label="Total costs" value={money(s.totalOut, cur)} sub={`personnel ${money(s.personnel, cur)} · other ${money(s.otherCosts, cur)}`} />
       <Stat label="Avg. monthly burn" value={money(s.avgMonthlyBurn, cur)} sub={`net of inflows: ${money(s.avgNetBurn, cur)}`} />
       <Stat
-        label="Grant (Zuschuss)"
-        value={money(f.grant, cur)}
-        sub={`${money(s.grantReceived, cur)} received within horizon`}
+        label="Grant covers"
+        value={money(s.grantCovered, cur)}
+        sub={`personnel ${money(s.grantOnPersonnel, cur)} · additional costs ${money(s.grantOnAdditional, cur)}`}
       />
       <Stat
-        label="Loan (Darlehen)"
-        value={money(f.loan, cur)}
-        sub={`${money(s.loanReceived, cur)} received within horizon · must be repaid`}
-      />
-      <Stat
-        label="Own contribution required"
-        value={money(f.own, cur)}
+        label="Founders must finance"
+        value={money(s.foundersNeed, cur)}
         sub={
-          f.own > 0
-            ? `${pct(f.own / (f.eligible || 1))} of eligible costs · founder cash covers ${pct(Math.min(1, s.founderTotal / f.own))}`
-            : 'no own contribution needed'
+          s.revenue > 0
+            ? `${money(s.founderBorne, cur)} of costs are not covered, revenue covers ${money(Math.min(s.revenue, s.founderBorne), cur)}`
+            : 'costs the grant does not cover'
         }
-        tone={f.own > 0 && s.founderTotal < f.own ? 'warn' : undefined}
+        tone={s.foundersNeed > s.founderTotal ? 'warn' : 'good'}
       />
+      <Stat label="Revenue" value={money(s.revenue, cur)} sub="from customers, within the horizon" />
       <Stat
-        label="Funding share of costs"
-        value={pct(s.fundingShareOfCosts)}
-        sub={`grant + loan received / total costs · funding ${money(f.funding, cur)} on ${money(f.eligible, cur)} eligible`}
-      />
-      <Stat label="Founder cash" value={money(s.founderTotal, cur)} sub="received within horizon" />
-      <Stat
-        label="Funding-eligible personnel"
-        value={money(s.eligiblePersonnel, cur)}
-        sub={s.personnel > 0 ? `${pct(s.eligiblePersonnel / s.personnel)} of personnel cost` : undefined}
+        label="Founder cash entered"
+        value={money(s.founderTotal, cur)}
+        sub={s.foundersNeed > 0 ? `covers ${pct(Math.min(1, s.founderTotal / s.foundersNeed))} of what founders must finance` : 'nothing further required by the grant'}
       />
     </div>
   )

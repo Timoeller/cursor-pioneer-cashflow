@@ -26,8 +26,8 @@ rules_version = '2';
 //   Shared by all members of the team.
 //   - name: string (required, 1-200 chars)
 //   - state: map (required) - the PlanState from src/model/types.ts:
-//       version: 1, settings: map, fundingPeriod: map, and the lists costs, employees,
-//       grantComponents, tranches, founderCash (each at most 500 entries)
+//       version: 1, settings: map, funding: map, and the lists costs, employees,
+//       tranches, founderCash, revenue (each at most 500 entries)
 //   - updatedAt: timestamp (required, server time of the write)
 //
 // Collection: users/{uid}/scenarios   (legacy, from before teams existed)
@@ -117,18 +117,18 @@ service cloud.firestore {
 
     function isValidPlanState(state) {
       return state is map
-        && state.keys().hasAll(['version', 'settings', 'costs', 'employees', 'fundingPeriod', 'grantComponents', 'tranches', 'founderCash'])
-        && state.keys().hasOnly(['version', 'settings', 'costs', 'employees', 'fundingPeriod', 'grantComponents', 'tranches', 'founderCash'])
+        && state.keys().hasAll(['version', 'settings', 'costs', 'employees', 'funding', 'tranches', 'founderCash', 'revenue'])
+        && state.keys().hasOnly(['version', 'settings', 'costs', 'employees', 'funding', 'tranches', 'founderCash', 'revenue'])
         && state.version == 1
         && state.settings is map
-        && state.settings.size() <= 50
-        && state.fundingPeriod is map
-        && state.fundingPeriod.size() <= 10
+        && state.settings.keys().size() <= 50
+        && state.funding is map
+        && state.funding.keys().size() <= 10
         && isValidList(state.costs)
         && isValidList(state.employees)
-        && isValidList(state.grantComponents)
         && isValidList(state.tranches)
-        && isValidList(state.founderCash);
+        && isValidList(state.founderCash)
+        && isValidList(state.revenue);
     }
 
     function isValidScenario(data) {
