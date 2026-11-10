@@ -10,21 +10,23 @@ import { FounderCashTable } from './components/FounderCashTable'
 import { ErrorScreen, LoadingScreen, PendingScreen, SignInScreen } from './components/Gate'
 import { GrantSection } from './components/GrantSection'
 import { MonthlyTable } from './components/MonthlyTable'
+import { RevenueTable } from './components/RevenueTable'
 import { SettingsPanel } from './components/SettingsPanel'
 import { SummaryStats } from './components/SummaryStats'
 import { createInitialState } from './data/initialState'
 import { teamStore, type Team } from './firebase'
-import { computeCashflow, personnelFundingRatePct, summarize } from './model/cashflow'
+import { computeCashflow, summarize } from './model/cashflow'
 import type { PlanState } from './model/types'
 import { useCloudSync } from './storage/useCloudSync'
 import { useAccess } from './useAccess'
 
-type Tab = 'costs' | 'employees' | 'grant' | 'founders' | 'settings'
+type Tab = 'costs' | 'employees' | 'revenue' | 'grant' | 'founders' | 'settings'
 type View = 'plan' | 'admin'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'costs', label: 'Costs' },
   { id: 'employees', label: 'Employees' },
+  { id: 'revenue', label: 'Revenue' },
   { id: 'grant', label: 'Grant' },
   { id: 'founders', label: 'Founder cash' },
   { id: 'settings', label: 'Settings' },
@@ -36,7 +38,7 @@ function Brand() {
       <div className="logo" aria-hidden="true">₵</div>
       <div>
         <h1>Pioneer Cash Flow</h1>
-        <p className="muted small">Costs, team, grant and founder cash, month by month</p>
+        <p className="muted small">Costs, revenue, grant and founder cash, month by month</p>
       </div>
     </div>
   )
@@ -121,9 +123,10 @@ function Planner({ user, team, hidden }: { user: User; team: Team; hidden: boole
             </nav>
             {tab === 'costs' && <CostsTable costs={state.costs} currency={state.settings.currency} onChange={patch('costs')} />}
             {tab === 'employees' && (
-              <EmployeesTable employees={state.employees} surchargePct={state.settings.employerSurchargePct} fundingRatePct={personnelFundingRatePct(state)} currency={state.settings.currency} onChange={patch('employees')} />
+              <EmployeesTable employees={state.employees} surchargePct={state.settings.employerSurchargePct} fundingRatePct={state.funding.ratePct} additionalCostPct={state.funding.additionalCostPct} currency={state.settings.currency} onChange={patch('employees')} />
             )}
-            {tab === 'grant' && <GrantSection state={state} onComponentsChange={patch('grantComponents')} onTranchesChange={patch('tranches')} onPeriodChange={patch('fundingPeriod')} />}
+            {tab === 'revenue' && <RevenueTable revenue={state.revenue} settings={state.settings} onChange={patch('revenue')} />}
+            {tab === 'grant' && <GrantSection state={state} onFundingChange={patch('funding')} onTranchesChange={patch('tranches')} />}
             {tab === 'founders' && <FounderCashTable founderCash={state.founderCash} settings={state.settings} onChange={patch('founderCash')} />}
             {tab === 'settings' && <SettingsPanel settings={state.settings} onChange={patch('settings')} />}
           </section>
