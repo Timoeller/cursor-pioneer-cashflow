@@ -1,153 +1,180 @@
-import type { User } from 'firebase/auth'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { firebaseEnabled, firestoreStore, watchUser } from '../firebase'
+import { createInitialState } from '../data/initialState'
+import { deleteLegacyScenario, listLegacyScenarios, type LiveScenarioStore } from '../firebase'
 import type { PlanState } from '../model/types'
-import { createAutosaver, type SaveStatus, type ScenarioMeta, type ScenarioStore } from './scenarios'
-
-const LAST_SCENARIO_KEY = 'pioneer-cashflow:last-scenario'
+import { normalizeState } from './local'
+import { createAutosaver, stableJson, toPlain, type SaveStatus, type ScenarioMeta } from './scenarios'
 
 interface Options {
+  uid: string
+  teamId: string
+  store: LiveScenarioStore
   state: PlanState
   /** Replace the editor state with a loaded scenario (must not trigger a save). */
   replaceState: (s: PlanState) => void
 }
 
-export function useCloudSync({ state, replaceState }: Options) {
-  const [user, setUser] = useState<User | null>(null)
-  const [authReady, setAuthReady] = useState(!firebaseEnabled)
+interface PendingSave {
+  id: string
+  state: PlanState
+}
+
+const lastScenarioKey = (teamId: string) => `pioneer-cashflow:last-scenario:${teamId}`
+
+export function useCloudSync({ uid, teamId, store, state, replaceState }: Options) {
   const [scenarios, setScenarios] = useState<ScenarioMeta[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [status, setStatus] = useState<SaveStatus>('idle')
   const [error, setError] = useState<string | null>(null)
-  /** Data entered in this browser before signing in that differs from the loaded scenario. */
-  const [localLeftover, setLocalLeftover] = useState<PlanState | null>(null)
+  const [legacyCount, setLegacyCount] = useState(0)
 
-  const storeRef = useRef<ScenarioStore | null>(null)
-  const saverRef = useRef<ReturnType<typeof createAutosaver> | null>(null)
+  const activeIdRef = useRef<string | null>(null)
+  const statusRef = useRef<SaveStatus>('idle')
+  /** The state last loaded from or saved to Firestore; edits equal to it are not saved again. */
   const loadedRef = useRef<PlanState | null>(null)
+  /** stableJson of the state Firestore has for the active scenario, to tell teammates' edits from our own. */
+  const syncedRef = useRef<string>('')
   const stateRef = useRef(state)
   useEffect(() => {
     stateRef.current = state
   }, [state])
 
-  const refreshList = useCallback(async () => {
-    if (storeRef.current) setScenarios(await storeRef.current.list())
-  }, [])
+  const saver = useRef<ReturnType<typeof createAutosaver<PendingSave>> | null>(null)
 
-  const openScenario = useCallback(
-    async (id: string) => {
-      const store = storeRef.current
-      if (!store) return
-      await saverRef.current?.flush()
-      const loaded = await store.load(id)
-      if (!loaded) return
+  const showLoaded = useCallback(
+    (id: string, loaded: PlanState) => {
       loadedRef.current = loaded
+      syncedRef.current = stableJson(loaded)
       replaceState(loaded)
+      activeIdRef.current = id
       setActiveId(id)
-      localStorage.setItem(LAST_SCENARIO_KEY, id)
-      setStatus('saved')
     },
     [replaceState],
   )
 
-  useEffect(
-    () =>
-      watchUser(async (u) => {
-        setUser(u)
-        setAuthReady(true)
-        saverRef.current?.cancel()
-        if (!u) {
-          storeRef.current = null
-          saverRef.current = null
-          setScenarios([])
-          setActiveId(null)
-          setLocalLeftover(null)
-          setStatus('idle')
-          return
-        }
-        const store = firestoreStore(u.uid)
-        storeRef.current = store
-        saverRef.current = createAutosaver(
-          async (s) => {
-            const id = localStorage.getItem(LAST_SCENARIO_KEY)
-            if (id) await store.save(id, s)
-          },
-          1000,
-          setStatus,
-        )
-        try {
-          const localState = stateRef.current
-          let list = await store.list()
-          if (list.length === 0) {
-            // first sign-in: keep whatever was entered in this browser
-            await store.create('Base case', localState)
-            list = await store.list()
-          }
-          setScenarios(list)
-          const last = localStorage.getItem(LAST_SCENARIO_KEY)
-          await openScenario(list.some((s) => s.id === last) ? last! : list[0].id)
-          if (loadedRef.current && JSON.stringify(loadedRef.current) !== JSON.stringify(localState)) {
-            setLocalLeftover(localState)
-          }
-        } catch (e) {
-          setError(e instanceof Error ? e.message : String(e))
-          setStatus('error')
-        }
-      }),
-    [openScenario],
+  const openScenario = useCallback(
+    async (id: string) => {
+      await saver.current?.flush()
+      const loaded = await store.load(id)
+      if (!loaded) return
+      showLoaded(id, loaded)
+      localStorage.setItem(lastScenarioKey(teamId), id)
+      setStatus('saved')
+    },
+    [saver, store, teamId, showLoaded],
   )
 
   useEffect(() => {
-    if (!activeId || !saverRef.current) return
-    if (state === loadedRef.current) return
-    saverRef.current.schedule(state)
-  }, [state, activeId])
+    let cancelled = false
+    const setSaveStatus = (s: SaveStatus) => {
+      statusRef.current = s
+      setStatus(s)
+    }
+    saver.current = createAutosaver(
+      async ({ id, state: s }) => {
+        await store.save(id, s)
+        if (activeIdRef.current === id) syncedRef.current = stableJson(normalizeState(toPlain(s)))
+      },
+      1000,
+      setSaveStatus,
+    )
+    activeIdRef.current = null
+
+    const stopList = store.watchList((list) => {
+      if (cancelled) return
+      setScenarios(list)
+      const active = activeIdRef.current
+      if (active && list.length > 0 && !list.some((s) => s.id === active)) {
+        void openScenario(list[0].id).catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      }
+    })
+
+    ;(async () => {
+      let list = await store.list()
+      if (list.length === 0) {
+        await store.create('Base case', createInitialState())
+        list = await store.list()
+      }
+      if (cancelled) return
+      const last = localStorage.getItem(lastScenarioKey(teamId))
+      await openScenario(list.some((s) => s.id === last) ? last! : list[0].id)
+      const legacy = await listLegacyScenarios(uid).catch(() => [])
+      if (!cancelled) setLegacyCount(legacy.length)
+    })().catch((e) => {
+      if (cancelled) return
+      setError(e instanceof Error ? e.message : String(e))
+      setSaveStatus('error')
+    })
+
+    return () => {
+      cancelled = true
+      stopList()
+      void saver.current?.flush()
+    }
+  }, [store, uid, teamId, saver, openScenario])
 
   useEffect(() => {
-    const onUnload = () => void saverRef.current?.flush()
+    if (!activeId) return
+    return store.watch(activeId, (remote) => {
+      if (activeIdRef.current !== activeId) return
+      if (stableJson(remote) === syncedRef.current) return
+      // Unsaved local edits win; they will overwrite the teammate's change when they are saved.
+      if (statusRef.current === 'pending' || statusRef.current === 'saving') return
+      loadedRef.current = remote
+      syncedRef.current = stableJson(remote)
+      replaceState(remote)
+    })
+  }, [store, activeId, replaceState])
+
+  useEffect(() => {
+    if (!activeId || !saver.current) return
+    if (state === loadedRef.current) return
+    saver.current.schedule({ id: activeId, state })
+  }, [state, activeId, saver])
+
+  useEffect(() => {
+    const onUnload = () => void saver.current?.flush()
     window.addEventListener('beforeunload', onUnload)
     return () => window.removeEventListener('beforeunload', onUnload)
-  }, [])
+  }, [saver])
 
-  const run = useCallback(async (fn: (store: ScenarioStore) => Promise<void>) => {
-    const store = storeRef.current
-    if (!store) return
+  const run = useCallback(async (fn: () => Promise<void>) => {
     try {
       setError(null)
-      await fn(store)
+      await fn()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
   }, [])
 
   return {
-    enabled: firebaseEnabled,
-    authReady,
-    user,
     scenarios,
     activeId,
     status,
     error,
-    localLeftover,
-    dismissLocalLeftover: () => setLocalLeftover(null),
+    legacyCount,
+    /** Copies the scenarios saved before teams existed into the team, then deletes the old copies. */
+    moveLegacyToTeam: () =>
+      run(async () => {
+        for (const s of await listLegacyScenarios(uid)) {
+          await store.create(s.name, s.state)
+          await deleteLegacyScenario(uid, s.id)
+        }
+        setLegacyCount(0)
+      }),
     open: (id: string) => run(() => openScenario(id)),
     create: (name: string, s: PlanState) =>
-      run(async (store) => {
-        await saverRef.current?.flush()
-        const id = await store.create(name, s)
-        await refreshList()
-        await openScenario(id)
+      run(async () => {
+        await saver.current?.flush()
+        await openScenario(await store.create(name, s))
       }),
-    rename: (id: string, name: string) => run(async (store) => { await store.rename(id, name); await refreshList() }),
+    rename: (id: string, name: string) => run(() => store.rename(id, name)),
     remove: (id: string) =>
-      run(async (store) => {
-        saverRef.current?.cancel()
+      run(async () => {
+        saver.current?.cancel()
         await store.remove(id)
         const list = await store.list()
-        if (list.length === 0) {
-          await store.create('Base case', stateRef.current)
-        }
-        await refreshList()
+        if (list.length === 0) await store.create('Base case', createInitialState())
         const next = (await store.list())[0]
         if (next) await openScenario(next.id)
       }),

@@ -16,6 +16,13 @@ export interface ScenarioStore {
   remove(id: string): Promise<void>
 }
 
+/** JSON with object keys sorted, so equal data compares equal whatever order Firestore returns the keys in. */
+export function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v,
+  )
+}
+
 /** Firestore rejects `undefined`; a JSON round trip strips it. */
 export function toPlain(state: PlanState): PlanState {
   return JSON.parse(JSON.stringify(state)) as PlanState
@@ -61,18 +68,18 @@ export type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error'
  * Debounces saves so typing doesn't write on every keystroke. Only the latest
  * state is written; `flush` writes any pending state immediately.
  */
-export function createAutosaver(save: (state: PlanState) => Promise<void>, delayMs: number, onStatus: (s: SaveStatus) => void) {
+export function createAutosaver<T = PlanState>(save: (value: T) => Promise<void>, delayMs: number, onStatus: (s: SaveStatus) => void) {
   let timer: ReturnType<typeof setTimeout> | null = null
-  let pending: PlanState | null = null
+  let pending: T | null = null
   let inFlight: Promise<void> = Promise.resolve()
 
   const run = async () => {
     timer = null
-    const state = pending
-    if (!state) return
+    const value = pending
+    if (!value) return
     pending = null
     onStatus('saving')
-    inFlight = inFlight.then(() => save(state))
+    inFlight = inFlight.then(() => save(value))
     try {
       await inFlight
       onStatus(pending ? 'pending' : 'saved')
@@ -83,8 +90,8 @@ export function createAutosaver(save: (state: PlanState) => Promise<void>, delay
   }
 
   return {
-    schedule(state: PlanState) {
-      pending = state
+    schedule(value: T) {
+      pending = value
       onStatus('pending')
       if (timer) clearTimeout(timer)
       timer = setTimeout(run, delayMs)

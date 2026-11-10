@@ -1,8 +1,6 @@
 import { createInitialState } from '../data/initialState'
 import type { CostItem, Employee, GrantComponent, PlanState, Tranche } from '../model/types'
 
-const KEY = 'pioneer-cashflow:state'
-
 export function newId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`
 }
@@ -37,23 +35,6 @@ export function normalizeState(raw: unknown): PlanState {
       kind: t.kind === 'loan' ? 'loan' : 'grant',
     })),
     founderCash: arr(r.founderCash, base.founderCash),
-  }
-}
-
-export function loadLocal(): PlanState | null {
-  try {
-    const s = localStorage.getItem(KEY)
-    return s ? normalizeState(JSON.parse(s)) : null
-  } catch {
-    return null
-  }
-}
-
-export function saveLocal(state: PlanState): void {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state))
-  } catch {
-    // storage full or disabled; nothing sensible to do
   }
 }
 
