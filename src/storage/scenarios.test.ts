@@ -39,7 +39,7 @@ describe('scenario store', () => {
       tranches: [{ id: 't', month: 4, amount: 500, kind: 'loan' }],
     })
     expect(s.funding).toEqual({ ratePct: 70, additionalCostPct: 40, amount: 500000, payMonthly: true })
-    expect(s.tranches).toEqual([{ id: 't', month: 4, amount: 500 }])
+    expect(s.tranches).toEqual([{ id: 't', month: 4 }])
     expect(s.revenue).toEqual([])
     expect('grantComponents' in s).toBe(false)
   })

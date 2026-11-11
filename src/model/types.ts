@@ -44,8 +44,8 @@ export interface FundingRules {
 
 export interface Tranche {
   id: string
+  /** Month the tranche is released. The amount is calculated, not entered. */
   month: number
-  amount: number
 }
 
 export interface RevenueItem {

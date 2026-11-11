@@ -9,7 +9,7 @@ A simple cash flow planner for an early-stage startup. It runs in the browser, i
 - **Costs**: starts with the cost lines from `costs_pioneer.xlsx`. Every line is editable: amount, monthly or one-off, multiplier, start and end month, comment. You can add or remove lines.
 - **Employees**: add as many people as you like, each with a gross monthly salary, a start month (month 1 = founding month) and an individual funding-eligible percentage. The employer surcharge (default 20 %) is a global setting. The three founders are pre-filled (8,000 € per month each incl. employer share, as in the spreadsheet).
 - **Revenue**: customer payments, each either monthly (with a start and end month) or one-time.
-- **Grant funding**: a fixed grant amount, a funding rate (default 80 %) and an additional-cost rate (default 40 %). Each month the grant pays the funding rate on the share of each employee's time that can be funded, then additional costs up to 40 % of that fundable cost, until the grant amount is used up. Someone who costs 100 and is fundable 50 % of the time is covered for 40 while money remains. By default the money arrives in the month it covers the cost; you can switch to tranches.
+- **Grant funding**: a fixed grant amount, a funding rate (default 80 %) and an additional-cost rate (default 40 %). Each month the grant pays the funding rate on the share of each employee's time that can be funded, then additional costs up to 40 % of that fundable cost, until the grant amount is used up. Someone who costs 100 and is fundable 50 % of the time is covered for 40 while money remains. By default the money arrives in the month it covers the cost. You can instead release it in tranches: you only set the month, and each tranche pays the funded salaries and additional costs that have built up since the previous one.
 - **Founder cash**: money the founders put into the company, per founder and month.
 - **Results**: when cash runs out, how much the founders still have to put in, the grant coverage and the burn rate; a balance chart; a cost breakdown; a month-by-month table with yearly subtotals and CSV export.
 
@@ -82,7 +82,7 @@ npm run dev
 - Personnel cost per month = gross salary x (1 + employer surcharge). Fundable personnel = that cost x the employee's funding-eligible %.
 - Each month the grant pays fundable personnel x funding rate, then additional costs up to fundable personnel x the additional-cost rate, capped by the other costs that month. Salaries are paid first. This continues until the fixed grant amount is used up; after that the founders finance every cost.
 - 1,000 of personnel funding at 80 % belongs to 1,250 of cost, so the founders put in 250. At 50 % fundable time, additional costs can be 40 % x 50 % = 20 % of the person's cost, and the funding rate is not applied to them.
-- Grant cash arrives monthly, equal to what it covers that month, or on the tranche dates if you choose tranches.
+- Grant cash arrives monthly, equal to what it covers that month, or on the tranche dates if you choose tranches. A tranche's amount is the funded personnel and additional costs since the previous tranche, through its release month. Covered costs after the last tranche are not paid out until you add another one.
 - Revenue is monthly between its start and end month, or once in its start month.
 - Closing balance = opening balance + founder cash + revenue + grant - costs.
 
