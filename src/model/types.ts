@@ -36,8 +36,8 @@ export interface FundingRules {
    * personnel costs. The funding rate is not applied on top. E.g. 40.
    */
   additionalCostPct: number
-  fromMonth: number
-  toMonth: number
+  /** Total grant money. It is drawn down each month until nothing is left. */
+  amount: number
   /** Paid each month as costs are covered. When false, cash arrives through tranches. */
   payMonthly: boolean
 }
@@ -85,14 +85,18 @@ export interface MonthRow {
   personnelByEmployee: Record<string, number>
   /** Personnel cost x funding-eligible %. */
   fundablePersonnel: number
-  /** Fundable personnel x funding rate. Zero outside the funding period. */
+  /** What the rules would pay this month before the grant amount runs out. */
+  grantClaim: number
+  /** Fundable personnel x funding rate, capped by the grant money still left. */
   grantOnPersonnel: number
   /** Fundable personnel x additional-cost rate. The funding rate is not applied. */
   additionalAllowance: number
-  /** Additional costs the grant actually pays: the allowance, capped by real other costs. */
+  /** Additional costs the grant pays: the allowance, capped by real other costs and by money left. */
   grantOnAdditional: number
   /** grantOnPersonnel + grantOnAdditional. */
   grantCovered: number
+  /** Grant money left after this month. */
+  grantRemaining: number
   /** Costs the grant does not cover. Founders finance this; revenue reduces the cash needed. */
   founderBorne: number
   revenueIn: number

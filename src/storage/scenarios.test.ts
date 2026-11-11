@@ -38,7 +38,7 @@ describe('scenario store', () => {
       grantComponents: [{ id: 'p', basis: 'personnel', ratePct: 70, grantSharePct: 60 }],
       tranches: [{ id: 't', month: 4, amount: 500, kind: 'loan' }],
     })
-    expect(s.funding).toMatchObject({ ratePct: 70, additionalCostPct: 40, fromMonth: 3, toMonth: 18, payMonthly: true })
+    expect(s.funding).toEqual({ ratePct: 70, additionalCostPct: 40, amount: 500000, payMonthly: true })
     expect(s.tranches).toEqual([{ id: 't', month: 4, amount: 500 }])
     expect(s.revenue).toEqual([])
     expect('grantComponents' in s).toBe(false)

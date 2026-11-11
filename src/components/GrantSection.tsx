@@ -17,17 +17,20 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
   const m = (v: number) => money(v, cur)
   const rows = computeCashflow(state)
   const s = summarize(state, rows)
-  const people = employeeFunding(state)
+  const people = employeeFunding(state, rows)
   const byId = new Map(people.map((p) => [p.id, p]))
   const set = (patch: Partial<FundingRules>) => onFundingChange({ ...funding, ...patch })
   const setT = (id: string, patch: Partial<Tranche>) => onTranchesChange(updateRow(tranches, id, patch))
   const sorted = [...tranches].sort((a, b) => a.month - b.month)
-  const unusedAllowance = Math.max(0, s.additionalAllowance - s.grantOnAdditional)
-  const trancheGap = s.grantCovered - s.trancheTotal
+  const unusedAllowance = rows.reduce((sum, r) => (r.grantCovered + 0.5 >= r.grantClaim && r.additionalAllowance > r.otherCosts ? sum + (r.additionalAllowance - r.otherCosts) : sum), 0)
+  const trancheGap = funding.amount - s.trancheTotal
+  const fundedMonths = rows.filter((r) => r.grantCovered > 0)
 
   const scheduleEvenly = () => {
-    const total = Math.round(s.grantCovered)
-    const points = [funding.fromMonth, Math.round((funding.fromMonth + funding.toMonth) / 2), funding.toMonth]
+    const total = Math.round(funding.amount)
+    const start = fundedMonths[0]?.month ?? 1
+    const end = fundedMonths.at(-1)?.month ?? start
+    const points = [start, Math.round((start + end) / 2), end]
     const part = Math.round(total / points.length)
     onTranchesChange(
       points.map((month, i) => ({
@@ -44,8 +47,7 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
         <div>
           <h2>Grant funding</h2>
           <p className="muted">
-            The grant pays {funding.ratePct} % of the working time that can be funded. The rest of that person's cost is financed by the founders.
-            Additional costs are covered up to {funding.additionalCostPct} % of the fundable personnel cost, and the {funding.ratePct} % rate is not applied to those.
+            The grant is a fixed amount. Each month it pays {funding.ratePct} % of fundable working time, then additional costs up to {funding.additionalCostPct} % of that fundable cost, until the amount is used up.
           </p>
         </div>
       </header>
@@ -53,7 +55,7 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
       <div className="funding-summary">
         <div><span>Grant on personnel</span><strong className="mono">{m(s.grantOnPersonnel)}</strong><small>{funding.ratePct} % of {m(s.fundablePersonnel)} fundable</small></div>
         <div><span>Grant on additional costs</span><strong className="mono">{m(s.grantOnAdditional)}</strong><small>allowance {m(s.additionalAllowance)}</small></div>
-        <div className="grant"><span>Grant covers in total</span><strong className="mono">{m(s.grantCovered)}</strong><small>this money arrives in full</small></div>
+        <div className="grant"><span>Grant money used</span><strong className="mono">{m(s.grantCovered)}</strong><small>{m(s.grantRemaining)} left of {m(s.grantAmount)}</small></div>
         <div className="own"><span>Founders finance</span><strong className="mono">{m(s.founderBorne)}</strong><small>costs the grant does not cover</small></div>
       </div>
 
@@ -67,22 +69,20 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
           <NumberField value={funding.additionalCostPct} min={0} max={200} onChange={(v) => set({ additionalCostPct: Math.max(0, v ?? 0) })} ariaLabel="Additional cost rate" />
         </label>
         <label>
-          <span>Funding from month</span>
-          <NumberField value={funding.fromMonth} min={1} step={1} onChange={(v) => set({ fromMonth: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Funding from month" />
-        </label>
-        <label>
-          <span>Funding to month</span>
-          <NumberField value={funding.toMonth} min={1} step={1} onChange={(v) => set({ toMonth: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Funding to month" />
+          <span>Grant amount</span>
+          <NumberField value={funding.amount} min={0} onChange={(v) => set({ amount: Math.max(0, v ?? 0) })} ariaLabel="Grant amount" />
         </label>
       </div>
       <p className="muted small">
-        {monthLabel(funding.fromMonth, settings.foundingMonth)} – {monthLabel(funding.toMonth, settings.foundingMonth)}. Outside this period the grant covers nothing.
-        {unusedAllowance >= 1 && ` ${m(unusedAllowance)} of the additional-cost allowance is unused, because other costs are lower.`}
+        {s.runsOutMonth == null
+          ? `The grant still has ${m(s.grantRemaining)} left after month ${settings.horizonMonths}.`
+          : `The grant runs out in ${monthLabel(s.runsOutMonth, settings.foundingMonth)}. After that, the founders finance every cost.`}
+        {unusedAllowance >= 1 && ` ${m(unusedAllowance)} of the additional-cost allowance is unused, because other costs are lower than the allowance.`}
       </p>
 
       {employees.length > 0 && (
         <>
-          <div className="subhead"><h3>Per employee, over the funding period</h3></div>
+          <div className="subhead"><h3>Per employee, paid from the grant</h3></div>
           <div className="table-wrap">
             <table className="data-table">
               <thead>
@@ -91,9 +91,9 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
                   <th className="r">Employer cost</th>
                   <th className="r">Fundable %</th>
                   <th className="r">Fundable cost</th>
-                  <th className="r">Grant ({funding.ratePct} %)</th>
+                  <th className="r">Grant paid</th>
                   <th className="r">Founders pay</th>
-                  <th className="r">Additional budget ({funding.additionalCostPct} %)</th>
+                  <th className="r">Additional costs paid</th>
                 </tr>
               </thead>
               <tbody>
@@ -149,8 +149,8 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
           <div className="subhead">
             <h3>Payout tranches</h3>
             <div className="inline">
-              <button type="button" className="btn ghost" onClick={scheduleEvenly}>Split {m(s.grantCovered)} into 3 tranches</button>
-              <button type="button" className="btn" onClick={() => onTranchesChange([...tranches, { id: newId('t'), month: (sorted.at(-1)?.month ?? funding.fromMonth) + 6, amount: 0 }])}>
+              <button type="button" className="btn ghost" onClick={scheduleEvenly}>Split {m(funding.amount)} into 3 tranches</button>
+              <button type="button" className="btn" onClick={() => onTranchesChange([...tranches, { id: newId('t'), month: (sorted.at(-1)?.month ?? 1) + 6, amount: 0 }])}>
                 + Add tranche
               </button>
             </div>
@@ -172,7 +172,7 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
                     <td><NumberField className="short" value={t.month} min={1} step={1} onChange={(v) => setT(t.id, { month: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Tranche month" /></td>
                     <td className="muted">{monthLabel(t.month, settings.foundingMonth)}</td>
                     <td><NumberField value={t.amount} min={0} onChange={(v) => setT(t.id, { amount: v ?? 0 })} ariaLabel="Tranche amount" /></td>
-                    <td className="r mono">{s.grantCovered > 0 ? pct(t.amount / s.grantCovered, 1) : '-'}</td>
+                    <td className="r mono">{funding.amount > 0 ? pct(t.amount / funding.amount, 1) : '-'}</td>
                     <td><RemoveButton label="Remove tranche" onClick={() => onTranchesChange(removeRow(tranches, t.id))} /></td>
                   </tr>
                 ))}
@@ -181,7 +181,7 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
                 <tr>
                   <td colSpan={2}>Scheduled</td>
                   <td className="r mono strong">{m(s.trancheTotal)}</td>
-                  <td className="r mono">{s.grantCovered > 0 ? pct(s.trancheTotal / s.grantCovered, 1) : '-'}</td>
+                  <td className="r mono">{funding.amount > 0 ? pct(s.trancheTotal / funding.amount, 1) : '-'}</td>
                   <td />
                 </tr>
               </tfoot>
@@ -190,8 +190,8 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
           {Math.abs(trancheGap) >= 1 && (
             <p className={`notice ${trancheGap < 0 ? 'bad' : 'warn'}`}>
               {trancheGap > 0
-                ? `Tranches pay ${m(s.trancheTotal)} of the ${m(s.grantCovered)} the grant covers. ${m(trancheGap)} is not scheduled, so the cash flow runs out earlier than the funding allows.`
-                : `Tranches exceed what the grant covers by ${m(-trancheGap)}.`}
+                ? `Tranches pay ${m(s.trancheTotal)} of the ${m(funding.amount)} grant. ${m(trancheGap)} is not scheduled.`
+                : `Tranches exceed the grant amount by ${m(-trancheGap)}.`}
             </p>
           )}
         </>
