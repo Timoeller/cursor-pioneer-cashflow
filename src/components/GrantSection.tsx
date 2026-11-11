@@ -1,4 +1,4 @@
-import { computeCashflow, employeeFunding, summarize } from '../model/cashflow'
+import { computeCashflow, employeeFunding, summarize, tranchePayouts } from '../model/cashflow'
 import type { FundingRules, PlanState, Tranche } from '../model/types'
 import { newId } from '../storage/local'
 import { money, monthLabel, pct } from '../ui/format'
@@ -21,25 +21,8 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
   const byId = new Map(people.map((p) => [p.id, p]))
   const set = (patch: Partial<FundingRules>) => onFundingChange({ ...funding, ...patch })
   const setT = (id: string, patch: Partial<Tranche>) => onTranchesChange(updateRow(tranches, id, patch))
-  const sorted = [...tranches].sort((a, b) => a.month - b.month)
+  const payouts = tranchePayouts(rows, tranches)
   const unusedAllowance = rows.reduce((sum, r) => (r.grantCovered + 0.5 >= r.grantClaim && r.additionalAllowance > r.otherCosts ? sum + (r.additionalAllowance - r.otherCosts) : sum), 0)
-  const trancheGap = funding.amount - s.trancheTotal
-  const fundedMonths = rows.filter((r) => r.grantCovered > 0)
-
-  const scheduleEvenly = () => {
-    const total = Math.round(funding.amount)
-    const start = fundedMonths[0]?.month ?? 1
-    const end = fundedMonths.at(-1)?.month ?? start
-    const points = [start, Math.round((start + end) / 2), end]
-    const part = Math.round(total / points.length)
-    onTranchesChange(
-      points.map((month, i) => ({
-        id: newId('t'),
-        month,
-        amount: i === points.length - 1 ? total - part * (points.length - 1) : part,
-      })),
-    )
-  }
 
   return (
     <section className="card">
@@ -148,38 +131,38 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
         <>
           <div className="subhead">
             <h3>Payout tranches</h3>
-            <div className="inline">
-              <button type="button" className="btn ghost" onClick={scheduleEvenly}>Split {m(funding.amount)} into 3 tranches</button>
-              <button type="button" className="btn" onClick={() => onTranchesChange([...tranches, { id: newId('t'), month: (sorted.at(-1)?.month ?? 1) + 6, amount: 0 }])}>
-                + Add tranche
-              </button>
-            </div>
+            <button type="button" className="btn" onClick={() => onTranchesChange([...tranches, { id: newId('t'), month: (payouts.at(-1)?.month ?? 0) + 6 }])}>
+              + Add tranche
+            </button>
           </div>
+          <p className="muted small">You only choose the month. Each tranche pays the funded salaries and additional costs that have built up since the previous tranche, through that month.</p>
           <div className="table-wrap">
             <table className="edit-table">
               <thead>
                 <tr>
-                  <th className="r">Payout month</th>
+                  <th className="r">Release month</th>
                   <th />
+                  <th>Covers</th>
                   <th className="r">Amount</th>
-                  <th className="r">Share</th>
+                  <th className="r">Share of grant</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((t) => (
-                  <tr key={t.id}>
-                    <td><NumberField className="short" value={t.month} min={1} step={1} onChange={(v) => setT(t.id, { month: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Tranche month" /></td>
-                    <td className="muted">{monthLabel(t.month, settings.foundingMonth)}</td>
-                    <td><NumberField value={t.amount} min={0} onChange={(v) => setT(t.id, { amount: v ?? 0 })} ariaLabel="Tranche amount" /></td>
-                    <td className="r mono">{funding.amount > 0 ? pct(t.amount / funding.amount, 1) : '-'}</td>
-                    <td><RemoveButton label="Remove tranche" onClick={() => onTranchesChange(removeRow(tranches, t.id))} /></td>
+                {payouts.map((p) => (
+                  <tr key={p.id}>
+                    <td><NumberField className="short" value={p.month} min={1} step={1} onChange={(v) => setT(p.id, { month: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Tranche month" /></td>
+                    <td className="muted">{monthLabel(p.month, settings.foundingMonth)}</td>
+                    <td className="muted">{p.fromMonth <= p.toMonth ? `${monthLabel(p.fromMonth, settings.foundingMonth)} – ${monthLabel(p.toMonth, settings.foundingMonth)}` : 'nothing new'}</td>
+                    <td className="r mono">{m(p.amount)}</td>
+                    <td className="r mono">{funding.amount > 0 ? pct(p.amount / funding.amount, 1) : '-'}</td>
+                    <td><RemoveButton label="Remove tranche" onClick={() => onTranchesChange(removeRow(tranches, p.id))} /></td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={2}>Scheduled</td>
+                  <td colSpan={3}>Released</td>
                   <td className="r mono strong">{m(s.trancheTotal)}</td>
                   <td className="r mono">{funding.amount > 0 ? pct(s.trancheTotal / funding.amount, 1) : '-'}</td>
                   <td />
@@ -187,12 +170,13 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
               </tfoot>
             </table>
           </div>
-          {Math.abs(trancheGap) >= 1 && (
-            <p className={`notice ${trancheGap < 0 ? 'bad' : 'warn'}`}>
-              {trancheGap > 0
-                ? `Tranches pay ${m(s.trancheTotal)} of the ${m(funding.amount)} grant. ${m(trancheGap)} is not scheduled.`
-                : `Tranches exceed the grant amount by ${m(-trancheGap)}.`}
+          {s.unreleased >= 1 && (
+            <p className="notice warn">
+              {m(s.unreleased)} of covered costs fall after the last tranche and are not paid out. Add a later tranche to release them.
             </p>
+          )}
+          {payouts.some((p) => p.month > settings.horizonMonths) && (
+            <p className="notice warn">A tranche is released after the planning horizon, so it is not included in the cash flow.</p>
           )}
         </>
       )}

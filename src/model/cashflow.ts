@@ -1,4 +1,4 @@
-import type { CostItem, Employee, MonthRow, PlanState, RevenueItem } from './types'
+import type { CostItem, Employee, MonthRow, PlanState, RevenueItem, Tranche } from './types'
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
 
@@ -69,6 +69,34 @@ export function employeeFunding(state: PlanState, rows: MonthRow[]): EmployeeFun
   return [...totals.values()]
 }
 
+export interface TranchePayout {
+  id: string
+  month: number
+  /** First month of covered costs included in this tranche. */
+  fromMonth: number
+  /** Last month of covered costs included in this tranche. */
+  toMonth: number
+  /** Funded personnel plus additional costs from fromMonth through toMonth. */
+  amount: number
+}
+
+/**
+ * Each tranche releases the grant coverage that has built up since the previous
+ * tranche, through the month it is paid. Only the month is an input.
+ */
+export function tranchePayouts(rows: MonthRow[], tranches: Tranche[]): TranchePayout[] {
+  const sorted = [...tranches].sort((a, b) => num(a.month) - num(b.month) || a.id.localeCompare(b.id))
+  let previous = 0
+  return sorted.map((t) => {
+    const month = Math.max(1, Math.round(num(t.month)))
+    const fromMonth = previous + 1
+    const toMonth = month
+    const amount = fromMonth <= toMonth ? rows.filter((r) => r.month >= fromMonth && r.month <= toMonth).reduce((s, r) => s + r.grantCovered, 0) : 0
+    previous = Math.max(previous, month)
+    return { id: t.id, month, fromMonth, toMonth, amount }
+  })
+}
+
 export function computeCashflow(state: PlanState): MonthRow[] {
   const rows: MonthRow[] = []
   const horizon = Math.max(1, Math.floor(num(state.settings.horizonMonths)))
@@ -111,8 +139,7 @@ export function computeCashflow(state: PlanState): MonthRow[] {
     const founderBorne = totalOut - grantCovered
 
     const revenueIn = state.revenue.reduce((s, r) => s + revenueInMonth(r, month), 0)
-    const trancheIn = state.tranches.filter((t) => num(t.month) === month).reduce((s, t) => s + num(t.amount), 0)
-    const grantIn = state.funding.payMonthly ? grantCovered : trancheIn
+    const grantIn = state.funding.payMonthly ? grantCovered : 0
     const founderIn = state.founderCash.filter((f) => num(f.month) === month).reduce((s, f) => s + num(f.amount), 0)
     const totalIn = grantIn + founderIn + revenueIn
     const net = totalIn - totalOut
@@ -143,6 +170,20 @@ export function computeCashflow(state: PlanState): MonthRow[] {
       closingBalance: balance,
     })
   }
+
+  if (!state.funding.payMonthly) {
+    const payoutByMonth = new Map<number, number>()
+    for (const p of tranchePayouts(rows, state.tranches)) payoutByMonth.set(p.month, (payoutByMonth.get(p.month) ?? 0) + p.amount)
+    let balance = num(state.settings.startingCash)
+    for (const row of rows) {
+      row.grantIn = payoutByMonth.get(row.month) ?? 0
+      row.totalIn = row.grantIn + row.founderIn + row.revenueIn
+      row.net = row.totalIn - row.totalOut
+      row.openingBalance = balance
+      balance += row.net
+      row.closingBalance = balance
+    }
+  }
   return rows
 }
 
@@ -169,6 +210,8 @@ export interface Summary {
   foundersNeed: number
   grantReceived: number
   trancheTotal: number
+  /** Covered costs not included in any tranche, because they fall after the last release. */
+  unreleased: number
   founderTotal: number
   totalIn: number
   avgMonthlyBurn: number
@@ -198,6 +241,8 @@ export function summarize(state: PlanState, rows: MonthRow[]): Summary {
     if (firstNegativeMonth == null && r.closingBalance < 0) firstNegativeMonth = r.month
   }
   const months = rows.length || 1
+  const payoutTotal = tranchePayouts(rows, state.tranches).reduce((s, t) => s + t.amount, 0)
+  const grantCovered = sum((r) => r.grantCovered)
   return {
     totalOut,
     personnel: sum((r) => r.personnel),
@@ -206,7 +251,7 @@ export function summarize(state: PlanState, rows: MonthRow[]): Summary {
     grantOnPersonnel: sum((r) => r.grantOnPersonnel),
     additionalAllowance: sum((r) => r.additionalAllowance),
     grantOnAdditional: sum((r) => r.grantOnAdditional),
-    grantCovered: sum((r) => r.grantCovered),
+    grantCovered,
     grantAmount: Math.max(0, num(state.funding.amount)),
     grantRemaining: rows.length ? rows[rows.length - 1].grantRemaining : Math.max(0, num(state.funding.amount)),
     runsOutMonth,
@@ -214,7 +259,8 @@ export function summarize(state: PlanState, rows: MonthRow[]): Summary {
     revenue,
     foundersNeed: Math.max(0, founderBorne - revenue),
     grantReceived: sum((r) => r.grantIn),
-    trancheTotal: state.tranches.reduce((s, t) => s + num(t.amount), 0),
+    trancheTotal: payoutTotal,
+    unreleased: Math.max(0, grantCovered - payoutTotal),
     founderTotal: sum((r) => r.founderIn),
     totalIn: sum((r) => r.totalIn),
     avgMonthlyBurn: totalOut / months,

@@ -41,9 +41,9 @@ export function createInitialState(): PlanState {
     employees: founders.map((e) => ({ ...e })),
     funding: { ratePct: 80, additionalCostPct: 40, amount: 500000, payMonthly: true },
     tranches: [
-      { id: 't-1', month: 4, amount: 150000 },
-      { id: 't-2', month: 12, amount: 150000 },
-      { id: 't-3', month: 20, amount: 200000 },
+      { id: 't-1', month: 4 },
+      { id: 't-2', month: 12 },
+      { id: 't-3', month: 20 },
     ],
     founderCash: [1, 2, 3].map((n) => ({ id: `f-${n}`, founder: `Founder ${n}`, month: 1, amount: 25000 })),
     revenue: [],

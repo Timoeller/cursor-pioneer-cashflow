@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createInitialState } from '../data/initialState'
-import { computeCashflow, employeeFunding, summarize, yearlyTotals } from './cashflow'
+import { computeCashflow, employeeFunding, summarize, tranchePayouts, yearlyTotals } from './cashflow'
 import type { PlanState } from './types'
 
 function emptyState(): PlanState {
@@ -86,21 +86,28 @@ describe('computeCashflow', () => {
     expect(employeeFunding(s, rows)[0].grant).toBeCloseTo(80)
   })
 
-  it('uses tranches instead of monthly payout when payMonthly is off', () => {
+  it('releases each tranche as the funded costs accumulated up to that month', () => {
     const s = emptyState()
-    s.settings.startingCash = 1000
+    s.settings.employerSurchargePct = 0
+    s.settings.horizonMonths = 6
     s.funding.payMonthly = false
-    s.costs = [{ id: 'r', name: 'x', monthlyAmount: 500, recurring: true, multiplier: 1, startMonth: 1, endMonth: null, comment: '' }]
-    s.tranches = [{ id: 't', month: 3, amount: 2000 }]
-    s.founderCash = [{ id: 'f', founder: 'A', month: 1, amount: 500 }]
+    s.funding.additionalCostPct = 0
+    s.funding.amount = 10_000
+    s.employees = [{ id: 'e', name: 'Dev', monthlySalary: 100, startMonth: 1, endMonth: null, fundingEligiblePct: 100 }]
+    s.tranches = [
+      { id: 'a', month: 3 },
+      { id: 'b', month: 5 },
+    ]
     const rows = computeCashflow(s)
-    expect(rows[0].grantIn).toBe(0)
-    expect(rows[2].grantIn).toBe(2000)
-    expect(rows.map((r) => r.closingBalance).slice(0, 4)).toEqual([1000, 500, 2000, 1500])
+    expect(rows.map((r) => r.grantCovered)).toEqual([80, 80, 80, 80, 80, 80])
+    expect(rows.map((r) => r.grantIn)).toEqual([0, 0, 240, 0, 160, 0])
+    expect(tranchePayouts(rows, s.tranches).map((t) => ({ from: t.fromMonth, to: t.toMonth, amount: t.amount }))).toEqual([
+      { from: 1, to: 3, amount: 240 },
+      { from: 4, to: 5, amount: 160 },
+    ])
     const sum = summarize(s, rows)
-    expect(sum.grantReceived).toBe(2000)
-    expect(sum.founderTotal).toBe(500)
-    expect(sum.firstNegativeMonth).toBe(8)
+    expect(sum.grantReceived).toBe(400)
+    expect(sum.unreleased).toBeCloseTo(80)
   })
 
   it('adds recurring and one-time revenue and reduces what founders must supply', () => {

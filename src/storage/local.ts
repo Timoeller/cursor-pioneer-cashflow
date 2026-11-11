@@ -39,7 +39,6 @@ export function normalizeState(raw: unknown): PlanState {
     tranches: arr<Partial<Tranche>>(r.tranches, []).map((t) => ({
       id: t.id ?? newId('t'),
       month: t.month ?? 1,
-      amount: t.amount ?? 0,
     })),
     founderCash: arr(r.founderCash, base.founderCash),
     revenue: arr<Partial<RevenueItem>>(r.revenue, []).map((item) => ({
