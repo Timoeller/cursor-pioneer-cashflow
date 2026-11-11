@@ -25,6 +25,7 @@ function toCsv(rows: MonthRow[], state: PlanState): string {
     'Additional cost allowance',
     'Grant on additional costs',
     'Grant covered',
+    'Grant left',
     'Founders finance',
     ...state.costs.map((c) => `Cost: ${c.name}`),
     'Other costs total',
@@ -48,6 +49,7 @@ function toCsv(rows: MonthRow[], state: PlanState): string {
     r2(r.additionalAllowance),
     r2(r.grantOnAdditional),
     r2(r.grantCovered),
+    r2(r.grantRemaining),
     r2(r.founderBorne),
     ...state.costs.map((c) => r2(r.costs[c.id] ?? 0)),
     r2(r.otherCosts),
@@ -98,6 +100,7 @@ export function MonthlyTable({ rows, state }: Props) {
               <th className="r">Personnel</th>
               <th className="r">Other costs</th>
               <th className="r">Grant covers</th>
+              <th className="r">Grant left</th>
               <th className="r">Founders finance</th>
               {detailCols.map((c) => (
                 <th key={c.id} className="r detail">{c.name}</th>
@@ -123,6 +126,7 @@ export function MonthlyTable({ rows, state }: Props) {
                     <td className="r mono">{m(r.personnel)}</td>
                     <td className="r mono">{m(r.otherCosts)}</td>
                     <td className="r mono">{m(r.grantCovered)}</td>
+                    <td className="r mono">{m(r.grantRemaining)}</td>
                     <td className="r mono">{m(r.founderBorne)}</td>
                     {detailCols.map((c) => (
                       <td key={c.id} className="r mono detail">
@@ -144,6 +148,7 @@ export function MonthlyTable({ rows, state }: Props) {
                       <td className="r mono">{m(year.personnel)}</td>
                       <td className="r mono">{m(year.otherCosts)}</td>
                       <td className="r mono">{m(year.grantCovered)}</td>
+                      <td className="r mono">{m(year.grantRemaining)}</td>
                       <td className="r mono">{m(year.founderBorne)}</td>
                       {detailCols.map((c) => (
                         <td key={c.id} className="detail" />

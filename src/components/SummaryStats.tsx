@@ -51,7 +51,11 @@ export function SummaryStats({ summary: s, settings }: Props) {
       <Stat
         label="Grant covers"
         value={money(s.grantCovered, cur)}
-        sub={`personnel ${money(s.grantOnPersonnel, cur)} · additional costs ${money(s.grantOnAdditional, cur)}`}
+        sub={
+          s.runsOutMonth == null
+            ? `${money(s.grantRemaining, cur)} of ${money(s.grantAmount, cur)} still left after month ${settings.horizonMonths}`
+            : `runs out in ${monthLabel(s.runsOutMonth, settings.foundingMonth)} · ${money(s.grantAmount, cur)} in total`
+        }
       />
       <Stat
         label="Founders must finance"

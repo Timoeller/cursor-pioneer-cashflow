@@ -26,42 +26,47 @@ export function personnelInMonth(e: Employee, month: number, surchargePct: numbe
   return isActive(num(e.startMonth), e.endMonth, month) ? employeeMonthlyCost(e, surchargePct) : 0
 }
 
-function inFundingPeriod(state: PlanState, month: number): boolean {
-  return month >= num(state.funding.fromMonth) && month <= num(state.funding.toMonth)
-}
-
 export interface EmployeeFunding {
   id: string
-  /** Employer cost inside the funding period. */
+  /** Employer cost over the whole horizon. */
   cost: number
   /** cost x funding-eligible %. */
   fundable: number
-  /** fundable x funding rate. */
+  /** This person's share of the personnel grant actually paid. */
   grant: number
-  /** fundable x additional-cost rate. The funding rate is not applied. */
+  /** This person's share of the additional-cost grant actually paid. */
   additional: number
-  /** cost - grant. The part of this person's cost the founders finance. */
+  /** cost - grant. The part of this person's own cost the founders finance. */
   founder: number
 }
 
-/** Per employee, summed over the funding period. */
-export function employeeFunding(state: PlanState): EmployeeFunding[] {
-  const { fromMonth, toMonth, ratePct, additionalCostPct } = state.funding
-  const surcharge = state.settings.employerSurchargePct
-  return state.employees.map((e) => {
-    let cost = 0
-    for (let m = num(fromMonth); m <= num(toMonth); m++) cost += personnelInMonth(e, m, surcharge)
-    const fundable = (cost * num(e.fundingEligiblePct)) / 100
-    const grant = (fundable * num(ratePct)) / 100
-    return {
-      id: e.id,
-      cost,
-      fundable,
-      grant,
-      additional: (fundable * num(additionalCostPct)) / 100,
-      founder: cost - grant,
+/** Per employee, using the grant money that was actually drawn down. */
+export function employeeFunding(state: PlanState, rows: MonthRow[]): EmployeeFunding[] {
+  const rate = num(state.funding.ratePct) / 100
+  const additionalRate = num(state.funding.additionalCostPct) / 100
+  const totals = new Map<string, EmployeeFunding>()
+  for (const e of state.employees) totals.set(e.id, { id: e.id, cost: 0, fundable: 0, grant: 0, additional: 0, founder: 0 })
+
+  for (const row of rows) {
+    const parts = state.employees.map((e) => {
+      const cost = row.personnelByEmployee[e.id] ?? 0
+      const fundable = (cost * num(e.fundingEligiblePct)) / 100
+      return { id: e.id, cost, fundable, claim: fundable * rate, allowance: fundable * additionalRate }
+    })
+    const claimSum = parts.reduce((s, p) => s + p.claim, 0)
+    const allowanceSum = parts.reduce((s, p) => s + p.allowance, 0)
+    const personnelScale = claimSum > 0 ? row.grantOnPersonnel / claimSum : 0
+    const additionalScale = allowanceSum > 0 ? row.grantOnAdditional / allowanceSum : 0
+    for (const p of parts) {
+      const t = totals.get(p.id)!
+      t.cost += p.cost
+      t.fundable += p.fundable
+      t.grant += p.claim * personnelScale
+      t.additional += p.allowance * additionalScale
     }
-  })
+  }
+  for (const t of totals.values()) t.founder = t.cost - t.grant
+  return [...totals.values()]
 }
 
 export function computeCashflow(state: PlanState): MonthRow[] {
@@ -70,6 +75,7 @@ export function computeCashflow(state: PlanState): MonthRow[] {
   const surcharge = state.settings.employerSurchargePct
   const rate = num(state.funding.ratePct) / 100
   const additionalRate = num(state.funding.additionalCostPct) / 100
+  let pot = Math.max(0, num(state.funding.amount))
   let balance = num(state.settings.startingCash)
 
   for (let month = 1; month <= horizon; month++) {
@@ -91,10 +97,15 @@ export function computeCashflow(state: PlanState): MonthRow[] {
       fundablePersonnel += (v * num(e.fundingEligiblePct)) / 100
     }
 
-    const funded = inFundingPeriod(state, month)
-    const grantOnPersonnel = funded ? fundablePersonnel * rate : 0
-    const additionalAllowance = funded ? fundablePersonnel * additionalRate : 0
-    const grantOnAdditional = funded ? Math.min(otherCosts, additionalAllowance) : 0
+    const personnelClaim = fundablePersonnel * rate
+    const additionalAllowance = fundablePersonnel * additionalRate
+    const additionalClaim = Math.min(otherCosts, additionalAllowance)
+    const grantClaim = personnelClaim + additionalClaim
+    // Salaries are paid from the grant first, then additional costs, until the amount is used up.
+    const grantOnPersonnel = Math.min(personnelClaim, pot)
+    pot -= grantOnPersonnel
+    const grantOnAdditional = Math.min(additionalClaim, pot)
+    pot -= grantOnAdditional
     const grantCovered = grantOnPersonnel + grantOnAdditional
     const totalOut = otherCosts + personnel
     const founderBorne = totalOut - grantCovered
@@ -115,10 +126,12 @@ export function computeCashflow(state: PlanState): MonthRow[] {
       personnel,
       personnelByEmployee,
       fundablePersonnel,
+      grantClaim,
       grantOnPersonnel,
       additionalAllowance,
       grantOnAdditional,
       grantCovered,
+      grantRemaining: pot,
       founderBorne,
       revenueIn,
       grantIn,
@@ -143,6 +156,12 @@ export interface Summary {
   grantOnAdditional: number
   /** What the grant pays for: personnel share + additional costs within the allowance. */
   grantCovered: number
+  /** The fixed grant amount. */
+  grantAmount: number
+  /** Grant money left after the last month. */
+  grantRemaining: number
+  /** First month the grant cannot pay everything the rules would cover. Null when money is left at the end. */
+  runsOutMonth: number | null
   /** Costs the grant does not cover. */
   founderBorne: number
   revenue: number
@@ -169,7 +188,9 @@ export function summarize(state: PlanState, rows: MonthRow[]): Summary {
   let minBalance = num(state.settings.startingCash)
   let minBalanceMonth = 0
   let firstNegativeMonth: number | null = null
+  let runsOutMonth: number | null = null
   for (const r of rows) {
+    if (runsOutMonth == null && r.grantClaim - r.grantCovered > 0.5) runsOutMonth = r.month
     if (r.closingBalance < minBalance) {
       minBalance = r.closingBalance
       minBalanceMonth = r.month
@@ -186,6 +207,9 @@ export function summarize(state: PlanState, rows: MonthRow[]): Summary {
     additionalAllowance: sum((r) => r.additionalAllowance),
     grantOnAdditional: sum((r) => r.grantOnAdditional),
     grantCovered: sum((r) => r.grantCovered),
+    grantAmount: Math.max(0, num(state.funding.amount)),
+    grantRemaining: rows.length ? rows[rows.length - 1].grantRemaining : Math.max(0, num(state.funding.amount)),
+    runsOutMonth,
     founderBorne,
     revenue,
     foundersNeed: Math.max(0, founderBorne - revenue),
@@ -212,6 +236,7 @@ export interface YearRow {
   revenueIn: number
   grantIn: number
   grantCovered: number
+  grantRemaining: number
   founderBorne: number
   founderIn: number
   totalIn: number
@@ -235,6 +260,7 @@ export function yearlyTotals(rows: MonthRow[]): YearRow[] {
         revenueIn: 0,
         grantIn: 0,
         grantCovered: 0,
+        grantRemaining: 0,
         founderBorne: 0,
         founderIn: 0,
         totalIn: 0,
@@ -250,6 +276,7 @@ export function yearlyTotals(rows: MonthRow[]): YearRow[] {
     y.revenueIn += r.revenueIn
     y.grantIn += r.grantIn
     y.grantCovered += r.grantCovered
+    y.grantRemaining = r.grantRemaining
     y.founderBorne += r.founderBorne
     y.founderIn += r.founderIn
     y.totalIn += r.totalIn

@@ -13,7 +13,7 @@ function emptyState(): PlanState {
     founderCash: [],
     revenue: [],
     settings: { ...s.settings, horizonMonths: 12 },
-    funding: { ...s.funding, payMonthly: true, fromMonth: 1, toMonth: 12, ratePct: 80, additionalCostPct: 40 },
+    funding: { ...s.funding, payMonthly: true, amount: 1_000_000, ratePct: 80, additionalCostPct: 40 },
   }
 }
 
@@ -68,16 +68,22 @@ describe('computeCashflow', () => {
     expect(computeCashflow(s)[0].grantOnAdditional).toBeCloseTo(10)
   })
 
-  it('does not fund costs outside the funding period', () => {
+  it('draws the fixed grant down until it runs out, paying salaries before additional costs', () => {
     const s = emptyState()
     s.settings.employerSurchargePct = 0
-    s.funding.fromMonth = 2
-    s.funding.toMonth = 2
-    s.employees = [{ id: 'e', name: 'Dev', monthlySalary: 100, startMonth: 1, endMonth: null, fundingEligiblePct: 100 }]
+    s.settings.horizonMonths = 4
+    s.funding.amount = 100
+    s.employees = [{ id: 'e', name: 'Dev', monthlySalary: 100, startMonth: 1, endMonth: null, fundingEligiblePct: 50 }]
+    s.costs = [{ id: 'c', name: 'office', monthlyAmount: 30, recurring: true, multiplier: 1, startMonth: 1, endMonth: null, comment: '' }]
     const rows = computeCashflow(s)
-    expect(rows[0].grantCovered).toBe(0)
-    expect(rows[1].grantOnPersonnel).toBeCloseTo(80)
-    expect(employeeFunding(s)[0].grant).toBeCloseTo(80)
+    // each month would claim 40 of salary + 20 of additional costs
+    expect(rows[0].grantCovered).toBeCloseTo(60)
+    expect(rows[0].grantRemaining).toBeCloseTo(40)
+    expect(rows[1].grantOnPersonnel).toBeCloseTo(40)
+    expect(rows[1].grantOnAdditional).toBeCloseTo(0)
+    expect(rows[2].grantCovered).toBe(0)
+    expect(summarize(s, rows).runsOutMonth).toBe(2)
+    expect(employeeFunding(s, rows)[0].grant).toBeCloseTo(80)
   })
 
   it('uses tranches instead of monthly payout when payMonthly is off', () => {

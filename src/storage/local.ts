@@ -5,7 +5,13 @@ export function newId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-interface LegacyState extends Partial<PlanState> {
+interface LegacyFunding extends Partial<FundingRules> {
+  fromMonth?: number
+  toMonth?: number
+}
+
+interface LegacyState extends Partial<Omit<PlanState, 'funding'>> {
+  funding?: LegacyFunding
   fundingPeriod?: { fromMonth?: number; toMonth?: number }
   grantComponents?: { basis?: string; ratePct?: number }[]
 }
@@ -17,13 +23,12 @@ export function normalizeState(raw: unknown): PlanState {
   const r = raw as LegacyState
   const arr = <T,>(v: unknown, fallback: T[]): T[] => (Array.isArray(v) ? (v as T[]) : fallback)
   const personnel = r.grantComponents?.find((c) => c.basis === 'personnel')
+  const incoming = r.funding
   const funding: FundingRules = {
-    ...base.funding,
-    ...(personnel?.ratePct != null ? { ratePct: personnel.ratePct } : {}),
-    ...(r.fundingPeriod
-      ? { fromMonth: r.fundingPeriod.fromMonth ?? base.funding.fromMonth, toMonth: r.fundingPeriod.toMonth ?? base.funding.toMonth }
-      : {}),
-    ...(r.funding ?? {}),
+    ratePct: incoming?.ratePct ?? personnel?.ratePct ?? base.funding.ratePct,
+    additionalCostPct: incoming?.additionalCostPct ?? base.funding.additionalCostPct,
+    amount: incoming?.amount ?? base.funding.amount,
+    payMonthly: incoming?.payMonthly ?? base.funding.payMonthly,
   }
   return {
     version: 1,
