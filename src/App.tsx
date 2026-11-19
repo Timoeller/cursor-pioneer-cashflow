@@ -1,5 +1,6 @@
 import type { User } from 'firebase/auth'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { markerWidget } from './marker'
 import { AdminPanel } from './components/AdminPanel'
 import { AuthBar, UserMenu } from './components/AuthBar'
 import { BalanceChart } from './components/BalanceChart'
@@ -44,15 +45,52 @@ function Brand() {
   )
 }
 
+function MarkerWidget({ user }: { user: User | null }) {
+  useEffect(() => {
+    let cancelled = false
+    markerWidget
+      .then((widget) => {
+        if (cancelled) return
+        if (user?.email) widget.setReporter({ email: user.email, fullName: user.displayName ?? '' })
+        else widget.clearReporter()
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+  return null
+}
+
 export default function App() {
   const access = useAccess()
   const [view, setView] = useState<View>('plan')
+  const reporter = access.status === 'loading' || access.status === 'signed-out' ? null : access.user
 
-  if (access.status === 'loading') return <LoadingScreen />
-  if (access.status === 'signed-out') return <SignInScreen />
-  if (access.status === 'pending') return <PendingScreen user={access.user} />
-  if (access.status === 'error') return <ErrorScreen user={access.user} error={access.error} />
+  let content: ReactNode
+  if (access.status === 'loading') content = <LoadingScreen />
+  else if (access.status === 'signed-out') content = <SignInScreen />
+  else if (access.status === 'pending') content = <PendingScreen user={access.user} />
+  else if (access.status === 'error') content = <ErrorScreen user={access.user} error={access.error} />
+  else content = <PlannerShell access={access} view={view} setView={setView} />
 
+  return (
+    <>
+      <MarkerWidget user={reporter} />
+      {content}
+    </>
+  )
+}
+
+function PlannerShell({
+  access,
+  view,
+  setView,
+}: {
+  access: Extract<ReturnType<typeof useAccess>, { status: 'ready' }>
+  view: View
+  setView: (view: View) => void
+}) {
   const { user, isAdmin, team } = access
   const shownView: View = isAdmin && (view === 'admin' || !team) ? 'admin' : 'plan'
 
