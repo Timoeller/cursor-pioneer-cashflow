@@ -1,5 +1,6 @@
 import { Area, Bar, CartesianGrid, ComposedChart, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { MonthRow, Settings } from '../model/types'
+import { balanceTooltipText } from '../ui/balanceTooltip'
 import { money, monthLabel } from '../ui/format'
 
 interface Props {
@@ -50,7 +51,7 @@ export function BalanceChart({ rows, settings }: Props) {
             <XAxis dataKey="label" tick={{ fontSize: 12, fill: 'var(--muted)' }} interval="preserveStartEnd" minTickGap={16} />
             <YAxis tickFormatter={(v: number) => money(v, cur, true)} tick={{ fontSize: 12, fill: 'var(--muted)' }} width={80} />
             <Tooltip
-              formatter={(v, name) => [money(Math.abs(Number(v)), cur), String(name)]}
+              formatter={(v, name) => [balanceTooltipText(Number(v), String(name), cur), String(name)]}
               labelFormatter={(_, p) => (p?.[0] ? monthLabel(p[0].payload.month, settings.foundingMonth) : '')}
               contentStyle={{ borderRadius: 8, border: '1px solid var(--border)', background: 'var(--card)' }}
             />
