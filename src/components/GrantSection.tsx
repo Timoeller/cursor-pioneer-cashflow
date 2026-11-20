@@ -28,55 +28,55 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
     <section className="card">
       <header className="card-head">
         <div>
-          <h2>Grant funding</h2>
+          <h2>Förderung</h2>
           <p className="muted">
-            The grant is a fixed amount. Each month it pays {funding.ratePct} % of fundable working time, then additional costs up to {funding.additionalCostPct} % of that fundable cost, until the amount is used up.
+            Die Förderung ist ein fester Betrag. Jeden Monat zahlt sie {funding.ratePct} % der förderfähigen Arbeitszeit und danach Gemeinkosten bis zu {funding.additionalCostPct} % dieser förderfähigen Kosten, bis der Betrag aufgebraucht ist.
           </p>
         </div>
       </header>
 
       <div className="funding-summary">
-        <div><span>Grant on personnel</span><strong className="mono">{m(s.grantOnPersonnel)}</strong><small>{funding.ratePct} % of {m(s.fundablePersonnel)} fundable</small></div>
-        <div><span>Grant on additional costs</span><strong className="mono">{m(s.grantOnAdditional)}</strong><small>allowance {m(s.additionalAllowance)}</small></div>
-        <div className="grant"><span>Grant money used</span><strong className="mono">{m(s.grantCovered)}</strong><small>{m(s.grantRemaining)} left of {m(s.grantAmount)}</small></div>
-        <div className="own"><span>Founders finance</span><strong className="mono">{m(s.founderBorne)}</strong><small>costs the grant does not cover</small></div>
+        <div><span>Förderung auf Personal</span><strong className="mono">{m(s.grantOnPersonnel)}</strong><small>{funding.ratePct} % von {m(s.fundablePersonnel)} förderfähig</small></div>
+        <div><span>Förderung auf Gemeinkosten</span><strong className="mono">{m(s.grantOnAdditional)}</strong><small>Zuschuss {m(s.additionalAllowance)}</small></div>
+        <div className="grant"><span>Verbrauchte Fördermittel</span><strong className="mono">{m(s.grantCovered)}</strong><small>{m(s.grantRemaining)} übrig von {m(s.grantAmount)}</small></div>
+        <div className="own"><span>Gründer finanzieren</span><strong className="mono">{m(s.founderBorne)}</strong><small>Kosten, die die Förderung nicht deckt</small></div>
       </div>
 
       <div className="settings-grid">
         <label>
-          <span>Funding rate (%)</span>
-          <NumberField value={funding.ratePct} min={0} max={100} onChange={(v) => set({ ratePct: Math.min(100, Math.max(0, v ?? 0)) })} ariaLabel="Funding rate" />
+          <span>Fördersatz (%)</span>
+          <NumberField value={funding.ratePct} min={0} max={100} onChange={(v) => set({ ratePct: Math.min(100, Math.max(0, v ?? 0)) })} ariaLabel="Fördersatz" />
         </label>
         <label>
-          <span>Additional costs (% of fundable personnel)</span>
-          <NumberField value={funding.additionalCostPct} min={0} max={200} onChange={(v) => set({ additionalCostPct: Math.max(0, v ?? 0) })} ariaLabel="Additional cost rate" />
+          <span>Gemeinkosten (% des förderfähigen Personals)</span>
+          <NumberField value={funding.additionalCostPct} min={0} max={200} onChange={(v) => set({ additionalCostPct: Math.max(0, v ?? 0) })} ariaLabel="Gemeinkostensatz" />
         </label>
         <label>
-          <span>Grant amount</span>
-          <NumberField value={funding.amount} min={0} onChange={(v) => set({ amount: Math.max(0, v ?? 0) })} ariaLabel="Grant amount" />
+          <span>Förderbetrag</span>
+          <NumberField value={funding.amount} min={0} onChange={(v) => set({ amount: Math.max(0, v ?? 0) })} ariaLabel="Förderbetrag" />
         </label>
       </div>
       <p className="muted small">
         {s.runsOutMonth == null
-          ? `The grant still has ${m(s.grantRemaining)} left after month ${settings.horizonMonths}.`
-          : `The grant runs out in ${monthLabel(s.runsOutMonth, settings.foundingMonth)}. After that, the founders finance every cost.`}
-        {unusedAllowance >= 1 && ` ${m(unusedAllowance)} of the additional-cost allowance is unused, because other costs are lower than the allowance.`}
+          ? `Nach Monat ${settings.horizonMonths} sind noch ${m(s.grantRemaining)} von der Förderung übrig.`
+          : `Die Förderung ist in ${monthLabel(s.runsOutMonth, settings.foundingMonth)} aufgebraucht. Danach finanzieren die Gründer jede Kostenposition.`}
+        {unusedAllowance >= 1 && ` ${m(unusedAllowance)} des Gemeinkostenzuschusses bleiben ungenutzt, weil die übrigen Kosten niedriger sind als der Zuschuss.`}
       </p>
 
       {employees.length > 0 && (
         <>
-          <div className="subhead"><h3>Per employee, paid from the grant</h3></div>
+          <div className="subhead"><h3>Pro Person, aus der Förderung gezahlt</h3></div>
           <div className="table-wrap">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Employee</th>
-                  <th className="r">Employer cost</th>
-                  <th className="r">Fundable %</th>
-                  <th className="r">Fundable cost</th>
-                  <th className="r">Grant paid</th>
-                  <th className="r">Founders pay</th>
-                  <th className="r">Additional costs paid</th>
+                  <th>Person</th>
+                  <th className="r">Arbeitgeberkosten</th>
+                  <th className="r">Förderfähig %</th>
+                  <th className="r">Förderfähige Kosten</th>
+                  <th className="r">Förderung gezahlt</th>
+                  <th className="r">Gründer zahlen</th>
+                  <th className="r">Gezahlte Gemeinkosten</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,7 +98,7 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={4}>Total</td>
+                  <td colSpan={4}>Summe</td>
                   <td className="r mono">{m(people.reduce((n, p) => n + p.grant, 0))}</td>
                   <td className="r mono">{m(people.reduce((n, p) => n + p.founder, 0))}</td>
                   <td className="r mono">{m(people.reduce((n, p) => n + p.additional, 0))}</td>
@@ -107,62 +107,62 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
             </table>
           </div>
           <p className="muted small">
-            Example: fundable 50 % and a funding rate of 80 % covers 40 % of that person's cost (50 % × 80 %). Additional costs can be 40 % × 50 % = 20 % of their cost, and the 80 % is not applied again.
+            Beispiel: 50 % förderfähig und ein Fördersatz von 80 % decken 40 % der Kosten dieser Person (50 % × 80 %). Gemeinkosten können 40 % × 50 % = 20 % ihrer Kosten betragen, und die 80 % werden nicht noch einmal angewendet.
           </p>
         </>
       )}
 
       <div className="subhead">
-        <h3>When the grant is paid</h3>
+        <h3>Wann die Förderung ausgezahlt wird</h3>
       </div>
       <div className="inline">
         <label className="toggle">
           <input type="radio" name="payout" checked={funding.payMonthly} onChange={() => set({ payMonthly: true })} />
-          Each month, as the costs are covered
+          Jeden Monat, sobald die Kosten gedeckt sind
         </label>
         <label className="toggle">
           <input type="radio" name="payout" checked={!funding.payMonthly} onChange={() => set({ payMonthly: false })} />
-          In tranches
+          In Tranchen
         </label>
       </div>
       {funding.payMonthly ? (
-        <p className="muted small">The cash flow receives {m(s.grantCovered)} in total, in the month the grant covers the cost. Switch to tranches if the money arrives later.</p>
+        <p className="muted small">Der Cashflow erhält insgesamt {m(s.grantCovered)}, in dem Monat, in dem die Förderung die Kosten deckt. Wechsle zu Tranchen, wenn das Geld später ankommt.</p>
       ) : (
         <>
           <div className="subhead">
-            <h3>Payout tranches</h3>
+            <h3>Auszahlungstranchen</h3>
             <button type="button" className="btn" onClick={() => onTranchesChange([...tranches, { id: newId('t'), month: (payouts.at(-1)?.month ?? 0) + 6 }])}>
-              + Add tranche
+              + Tranche hinzufügen
             </button>
           </div>
-          <p className="muted small">You only choose the month. Each tranche pays the funded salaries and additional costs that have built up since the previous tranche, through that month.</p>
+          <p className="muted small">Du legst nur den Monat fest. Jede Tranche zahlt die geförderten Gehälter und Gemeinkosten, die sich seit der vorherigen Tranche bis zu diesem Monat angesammelt haben.</p>
           <div className="table-wrap">
             <table className="edit-table">
               <thead>
                 <tr>
-                  <th className="r">Release month</th>
+                  <th className="r">Auszahlungsmonat</th>
                   <th />
-                  <th>Covers</th>
-                  <th className="r">Amount</th>
-                  <th className="r">Share of grant</th>
+                  <th>Deckt</th>
+                  <th className="r">Betrag</th>
+                  <th className="r">Anteil der Förderung</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
                 {payouts.map((p) => (
                   <tr key={p.id}>
-                    <td><NumberField className="short" value={p.month} min={1} step={1} onChange={(v) => setT(p.id, { month: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Tranche month" /></td>
+                    <td><NumberField className="short" value={p.month} min={1} step={1} onChange={(v) => setT(p.id, { month: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Tranchenmonat" /></td>
                     <td className="muted">{monthLabel(p.month, settings.foundingMonth)}</td>
-                    <td className="muted">{p.fromMonth <= p.toMonth ? `${monthLabel(p.fromMonth, settings.foundingMonth)} – ${monthLabel(p.toMonth, settings.foundingMonth)}` : 'nothing new'}</td>
+                    <td className="muted">{p.fromMonth <= p.toMonth ? `${monthLabel(p.fromMonth, settings.foundingMonth)} – ${monthLabel(p.toMonth, settings.foundingMonth)}` : 'nichts Neues'}</td>
                     <td className="r mono">{m(p.amount)}</td>
                     <td className="r mono">{funding.amount > 0 ? pct(p.amount / funding.amount, 1) : '-'}</td>
-                    <td><RemoveButton label="Remove tranche" onClick={() => onTranchesChange(removeRow(tranches, p.id))} /></td>
+                    <td><RemoveButton label="Tranche entfernen" onClick={() => onTranchesChange(removeRow(tranches, p.id))} /></td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={3}>Released</td>
+                  <td colSpan={3}>Ausgezahlt</td>
                   <td className="r mono strong">{m(s.trancheTotal)}</td>
                   <td className="r mono">{funding.amount > 0 ? pct(s.trancheTotal / funding.amount, 1) : '-'}</td>
                   <td />
@@ -172,11 +172,11 @@ export function GrantSection({ state, onFundingChange, onTranchesChange }: Props
           </div>
           {s.unreleased >= 1 && (
             <p className="notice warn">
-              {m(s.unreleased)} of covered costs fall after the last tranche and are not paid out. Add a later tranche to release them.
+              {m(s.unreleased)} gedeckte Kosten liegen nach der letzten Tranche und werden nicht ausgezahlt. Füge eine spätere Tranche hinzu, um sie freizugeben.
             </p>
           )}
           {payouts.some((p) => p.month > settings.horizonMonths) && (
-            <p className="notice warn">A tranche is released after the planning horizon, so it is not included in the cash flow.</p>
+            <p className="notice warn">Eine Tranche wird nach dem Planungshorizont ausgezahlt und ist deshalb nicht im Cashflow enthalten.</p>
           )}
         </>
       )}

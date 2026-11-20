@@ -12,27 +12,27 @@ interface Props {
 export function CostBreakdown({ rows, state }: Props) {
   const cur = state.settings.currency
   const items: { name: string; value: number }[] = [
-    { name: 'Personnel', value: rows.reduce((s, r) => s + r.personnel, 0) },
-    ...state.costs.map((c) => ({ name: c.name || 'Unnamed', value: rows.reduce((s, r) => s + (r.costs[c.id] ?? 0), 0) })),
+    { name: 'Personal', value: rows.reduce((s, r) => s + r.personnel, 0) },
+    ...state.costs.map((c) => ({ name: c.name || 'Unbenannt', value: rows.reduce((s, r) => s + (r.costs[c.id] ?? 0), 0) })),
   ]
     .filter((i) => i.value > 0)
     .sort((a, b) => b.value - a.value)
 
   const top = items.slice(0, 8)
   const rest = items.slice(8).reduce((s, i) => s + i.value, 0)
-  const data = rest > 0 ? [...top, { name: 'Other', value: rest }] : top
+  const data = rest > 0 ? [...top, { name: 'Sonstige', value: rest }] : top
   const total = data.reduce((s, d) => s + d.value, 0)
 
   return (
     <section className="card">
       <header className="card-head">
         <div>
-          <h2>Where the money goes</h2>
-          <p className="muted">Costs over the whole planning horizon.</p>
+          <h2>Wohin das Geld fließt</h2>
+          <p className="muted">Kosten über den gesamten Planungshorizont.</p>
         </div>
       </header>
       {total === 0 ? (
-        <p className="muted">No costs yet.</p>
+        <p className="muted">Noch keine Kosten.</p>
       ) : (
         <div className="breakdown">
           <div className="chart">

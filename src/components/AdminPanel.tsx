@@ -39,8 +39,8 @@ export function AdminPanel({ currentUid }: Props) {
   const changeTeam = (user: UserProfile, teamId: string) => {
     const current = members.get(user.uid)
     if (teamId === NO_ACCESS) {
-      const who = user.uid === currentUid ? 'yourself' : user.email
-      if (!window.confirm(`Remove access for ${who}? They will no longer see any data.`)) return
+      const who = user.uid === currentUid ? 'dich selbst' : user.email
+      if (!window.confirm(`Zugriff für ${who} entziehen? Danach sind keine Daten mehr sichtbar.`)) return
       run(() => setMembership(user.uid, null))
     } else {
       run(() => setMembership(user.uid, { teamId, role: current?.role ?? 'member' }))
@@ -51,7 +51,7 @@ export function AdminPanel({ currentUid }: Props) {
     const current = members.get(user.uid)
     if (!current) return
     if (user.uid === currentUid && role !== 'admin' && !BOOTSTRAP_ADMIN_EMAILS.includes(user.email)) {
-      if (!window.confirm('Remove your own admin rights? You will lose access to this tab.')) return
+      if (!window.confirm('Eigene Admin-Rechte entziehen? Du verlierst den Zugriff auf diesen Bereich.')) return
     }
     run(() => setMembership(user.uid, { ...current, role }))
   }
@@ -65,25 +65,25 @@ export function AdminPanel({ currentUid }: Props) {
       <section className="card">
         <div className="card-head">
           <div>
-            <h2>Users</h2>
+            <h2>Nutzer</h2>
             <p className="muted small">
-              Everyone who signed in shows up here. Pick a team to give someone access; everyone in a team sees and edits the same scenarios.
+              Hier erscheinen alle, die sich angemeldet haben. Wähle ein Team, um jemandem Zugriff zu geben. Alle in einem Team sehen und bearbeiten dieselben Szenarien.
             </p>
           </div>
-          {pending > 0 && <span className="pending-badge">{pending} waiting for approval</span>}
+          {pending > 0 && <span className="pending-badge">{pending === 1 ? '1 wartet auf Freigabe' : `${pending} warten auf Freigabe`}</span>}
         </div>
-        {teams.length === 0 && <div className="notice warn">Create a team below before giving anyone access.</div>}
+        {teams.length === 0 && <div className="notice warn">Lege unten ein Team an, bevor du jemandem Zugriff gibst.</div>}
         {users === null ? (
-          <p className="muted">Loading…</p>
+          <p className="muted">Wird geladen…</p>
         ) : (
           <div className="table-wrap">
             <table className="data-table admin-table">
               <thead>
                 <tr>
-                  <th>User</th>
-                  <th>Registered</th>
-                  <th>Team (access)</th>
-                  <th>Role</th>
+                  <th>Nutzer</th>
+                  <th>Registriert</th>
+                  <th>Team (Zugriff)</th>
+                  <th>Rolle</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,17 +98,17 @@ export function AdminPanel({ currentUid }: Props) {
                           <div>
                             <div>
                               {u.displayName || u.email}
-                              {u.uid === currentUid && <span className="muted"> (you)</span>}
+                              {u.uid === currentUid && <span className="muted"> (du)</span>}
                             </div>
                             <div className="muted small">{u.email}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="muted">{new Date(u.createdAt).toLocaleDateString()}</td>
+                      <td className="muted">{new Date(u.createdAt).toLocaleDateString('de-DE')}</td>
                       <td>
-                        <label className="sr-only" htmlFor={`team-${u.uid}`}>Team of {u.email}</label>
+                        <label className="sr-only" htmlFor={`team-${u.uid}`}>Team von {u.email}</label>
                         <select id={`team-${u.uid}`} value={m?.teamId ?? NO_ACCESS} onChange={(e) => changeTeam(u, e.target.value)}>
-                          <option value={NO_ACCESS}>{m ? 'Remove access' : 'No access (waiting)'}</option>
+                          <option value={NO_ACCESS}>{m ? 'Zugriff entziehen' : 'Kein Zugriff (wartet)'}</option>
                           {teams.map((t) => (
                             <option key={t.id} value={t.id}>{t.name}</option>
                           ))}
@@ -116,12 +116,12 @@ export function AdminPanel({ currentUid }: Props) {
                       </td>
                       <td>
                         {builtIn ? (
-                          <span className="muted">Admin (built-in)</span>
+                          <span className="muted">Admin (fest)</span>
                         ) : (
                           <>
-                            <label className="sr-only" htmlFor={`role-${u.uid}`}>Role of {u.email}</label>
+                            <label className="sr-only" htmlFor={`role-${u.uid}`}>Rolle von {u.email}</label>
                             <select id={`role-${u.uid}`} value={m?.role ?? 'member'} disabled={!m} onChange={(e) => changeRole(u, e.target.value as Role)}>
-                              <option value="member">Member</option>
+                              <option value="member">Mitglied</option>
                               <option value="admin">Admin</option>
                             </select>
                           </>
@@ -140,28 +140,28 @@ export function AdminPanel({ currentUid }: Props) {
         <div className="card-head">
           <div>
             <h2>Teams</h2>
-            <p className="muted small">Each team has its own set of scenarios.</p>
+            <p className="muted small">Jedes Team hat eigene Szenarien.</p>
           </div>
           <button
             type="button"
             className="btn"
             onClick={() => {
-              const name = window.prompt('Name of the new team')?.trim()
+              const name = window.prompt('Name des neuen Teams')?.trim()
               if (name) run(() => createTeam(name.slice(0, 100)))
             }}
           >
-            New team
+            Neues Team
           </button>
         </div>
         {teams.length === 0 ? (
-          <p className="muted">No teams yet.</p>
+          <p className="muted">Noch keine Teams.</p>
         ) : (
           <div className="table-wrap">
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Team</th>
-                  <th className="r">Members</th>
+                  <th className="r">Mitglieder</th>
                   <th />
                 </tr>
               </thead>
@@ -175,11 +175,11 @@ export function AdminPanel({ currentUid }: Props) {
                         type="button"
                         className="link-btn"
                         onClick={() => {
-                          const name = window.prompt('Rename team', t.name)?.trim()
+                          const name = window.prompt('Team umbenennen', t.name)?.trim()
                           if (name && name !== t.name) run(() => renameTeam(t.id, name.slice(0, 100)))
                         }}
                       >
-                        Rename
+                        Umbenennen
                       </button>
                     </td>
                   </tr>
@@ -190,7 +190,7 @@ export function AdminPanel({ currentUid }: Props) {
         )}
       </section>
 
-      {error && <div className="notice bad">Error: {error}</div>}
+      {error && <div className="notice bad">Fehler: {error}</div>}
     </div>
   )
 }

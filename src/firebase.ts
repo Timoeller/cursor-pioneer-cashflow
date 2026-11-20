@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore'
 import type { PlanState } from './model/types'
 import { normalizeState } from './storage/local'
+import { UNTITLED_SCENARIO } from './ui/de'
 import { toPlain, type ScenarioMeta, type ScenarioStore } from './storage/scenarios'
 
 // Web config of the pioneer-cashflow project. These values are public; firestore.rules protects the data.
@@ -191,7 +192,7 @@ export interface LiveScenarioStore extends ScenarioStore {
 export function teamStore(teamId: string): LiveScenarioStore {
   const { db } = init()
   const col = collection(db, 'teams', teamId, 'scenarios')
-  const toMeta = (id: string, data: Record<string, unknown>): ScenarioMeta => ({ id, name: String(data.name ?? 'Untitled'), updatedAt: millis(data.updatedAt) })
+  const toMeta = (id: string, data: Record<string, unknown>): ScenarioMeta => ({ id, name: String(data.name ?? UNTITLED_SCENARIO), updatedAt: millis(data.updatedAt) })
   return {
     async list() {
       const snap = await getDocs(col)
@@ -228,7 +229,7 @@ export function teamStore(teamId: string): LiveScenarioStore {
 /** Scenarios saved per user before teams existed (users/{uid}/scenarios). They can only be read and deleted. */
 export async function listLegacyScenarios(uid: string): Promise<{ id: string; name: string; state: PlanState }[]> {
   const snap = await getDocs(collection(init().db, 'users', uid, 'scenarios'))
-  return snap.docs.map((d) => ({ id: d.id, name: String(d.data().name ?? 'Untitled'), state: normalizeState(d.data().state) }))
+  return snap.docs.map((d) => ({ id: d.id, name: String(d.data().name ?? UNTITLED_SCENARIO), state: normalizeState(d.data().state) }))
 }
 
 export async function deleteLegacyScenario(uid: string, id: string): Promise<void> {

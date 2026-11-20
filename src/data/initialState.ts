@@ -20,7 +20,7 @@ export const initialCosts: CostItem[] = [
 /** "founder salaries" row: 8,000 / month incl. 20% employer share, x3 founders. */
 const founders: Employee[] = [1, 2, 3].map((n) => ({
   id: `e-founder-${n}`,
-  name: `Founder ${n}`,
+  name: `Gründer ${n}`,
   monthlySalary: 6666.67,
   startMonth: 1,
   endMonth: null,
@@ -45,7 +45,7 @@ export function createInitialState(): PlanState {
       { id: 't-2', month: 12 },
       { id: 't-3', month: 20 },
     ],
-    founderCash: [1, 2, 3].map((n) => ({ id: `f-${n}`, founder: `Founder ${n}`, month: 1, amount: 25000 })),
+    founderCash: [1, 2, 3].map((n) => ({ id: `f-${n}`, founder: `Gründer ${n}`, month: 1, amount: 25000 })),
     revenue: [],
   }
 }

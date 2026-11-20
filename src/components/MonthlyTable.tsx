@@ -11,27 +11,27 @@ interface Props {
 
 function toCsv(rows: MonthRow[], state: PlanState): string {
   const header = [
-    'Month',
-    'Label',
-    'Opening balance',
-    'Founder cash',
-    'Revenue',
-    'Grant',
-    'Total in',
-    ...state.employees.map((e) => `Personnel: ${e.name}`),
-    'Personnel total',
-    'Fundable personnel',
-    'Grant on personnel',
-    'Additional cost allowance',
-    'Grant on additional costs',
-    'Grant covered',
-    'Grant left',
-    'Founders finance',
-    ...state.costs.map((c) => `Cost: ${c.name}`),
-    'Other costs total',
-    'Total out',
-    'Net cash flow',
-    'Closing balance',
+    'Monat',
+    'Bezeichnung',
+    'Anfangsbestand',
+    'Gründergeld',
+    'Umsatz',
+    'Förderung',
+    'Summe Eingänge',
+    ...state.employees.map((e) => `Personal: ${e.name}`),
+    'Personal gesamt',
+    'Förderfähiges Personal',
+    'Förderung auf Personal',
+    'Gemeinkostenzuschuss',
+    'Förderung auf Gemeinkosten',
+    'Förderung gedeckt',
+    'Förderung übrig',
+    'Gründer finanzieren',
+    ...state.costs.map((c) => `Kosten: ${c.name}`),
+    'Sonstige Kosten gesamt',
+    'Summe Ausgänge',
+    'Netto-Cashflow',
+    'Schlussbestand',
   ]
   const r2 = (n: number) => n.toFixed(2)
   const lines = rows.map((r) => [
@@ -75,15 +75,15 @@ export function MonthlyTable({ rows, state }: Props) {
     <section className="card">
       <header className="card-head">
         <div>
-          <h2>Monthly cash flow</h2>
-          <p className="muted">Yearly subtotals are shown after every 12 months.</p>
+          <h2>Monatlicher Cashflow</h2>
+          <p className="muted">Jahressummen stehen nach jeweils 12 Monaten.</p>
         </div>
         <div className="inline">
           <label className="toggle">
-            <input type="checkbox" checked={detail} onChange={(e) => setDetail(e.target.checked)} /> Show every cost line
+            <input type="checkbox" checked={detail} onChange={(e) => setDetail(e.target.checked)} /> Jede Kostenzeile anzeigen
           </label>
           <button type="button" className="btn" onClick={() => downloadFile('cashflow.csv', toCsv(rows, state), 'text/csv')}>
-            Export CSV
+            CSV exportieren
           </button>
         </div>
       </header>
@@ -91,23 +91,23 @@ export function MonthlyTable({ rows, state }: Props) {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Month</th>
-              <th className="r">Opening</th>
-              <th className="r">Founder cash</th>
-              <th className="r">Revenue</th>
-              <th className="r">Grant</th>
-              <th className="r">Total in</th>
-              <th className="r">Personnel</th>
-              <th className="r">Other costs</th>
-              <th className="r">Grant covers</th>
-              <th className="r">Grant left</th>
-              <th className="r">Founders finance</th>
+              <th>Monat</th>
+              <th className="r">Anfang</th>
+              <th className="r">Gründergeld</th>
+              <th className="r">Umsatz</th>
+              <th className="r">Förderung</th>
+              <th className="r">Summe Eingänge</th>
+              <th className="r">Personal</th>
+              <th className="r">Sonstige Kosten</th>
+              <th className="r">Förderung deckt</th>
+              <th className="r">Förderung übrig</th>
+              <th className="r">Gründer finanzieren</th>
               {detailCols.map((c) => (
                 <th key={c.id} className="r detail">{c.name}</th>
               ))}
-              <th className="r">Total out</th>
-              <th className="r">Net</th>
-              <th className="r">Closing balance</th>
+              <th className="r">Summe Ausgänge</th>
+              <th className="r">Netto</th>
+              <th className="r">Schlussbestand</th>
             </tr>
           </thead>
           <tbody>
@@ -139,7 +139,7 @@ export function MonthlyTable({ rows, state }: Props) {
                   </tr>
                   {endOfYear && (
                     <tr className="year-row">
-                      <td>Year {year.year} (M{year.fromMonth}–M{year.toMonth})</td>
+                      <td>Jahr {year.year} (M{year.fromMonth}–M{year.toMonth})</td>
                       <td />
                       <td className="r mono">{m(year.founderIn)}</td>
                       <td className="r mono">{m(year.revenueIn)}</td>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createInitialState } from '../data/initialState'
+import { DEFAULT_SCENARIO_NAME } from '../ui/de'
 import { deleteLegacyScenario, listLegacyScenarios, type LiveScenarioStore } from '../firebase'
 import type { PlanState } from '../model/types'
 import { normalizeState } from './local'
@@ -92,7 +93,7 @@ export function useCloudSync({ uid, teamId, store, state, replaceState }: Option
     ;(async () => {
       let list = await store.list()
       if (list.length === 0) {
-        await store.create('Base case', createInitialState())
+        await store.create(DEFAULT_SCENARIO_NAME, createInitialState())
         list = await store.list()
       }
       if (cancelled) return
@@ -174,7 +175,7 @@ export function useCloudSync({ uid, teamId, store, state, replaceState }: Option
         saver.current?.cancel()
         await store.remove(id)
         const list = await store.list()
-        if (list.length === 0) await store.create('Base case', createInitialState())
+        if (list.length === 0) await store.create(DEFAULT_SCENARIO_NAME, createInitialState())
         const next = (await store.list())[0]
         if (next) await openScenario(next.id)
       }),

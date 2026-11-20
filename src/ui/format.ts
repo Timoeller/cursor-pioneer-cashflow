@@ -19,11 +19,11 @@ export function pct(value: number, digits = 0): string {
   return `${(value * 100).toFixed(digits)} %`
 }
 
-/** "M5" or, when a founding month (YYYY-MM) is set, "M5 · May 27". */
+/** "M5" or, when a founding month (YYYY-MM) is set, "M5 · Mai 27". */
 export function monthLabel(month: number, foundingMonth: string, short = false): string {
   const match = /^(\d{4})-(\d{2})$/.exec(foundingMonth)
   if (!match) return `M${month}`
   const d = new Date(Number(match[1]), Number(match[2]) - 1 + month - 1, 1)
-  const cal = d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
+  const cal = d.toLocaleDateString('de-DE', { month: 'short', year: '2-digit' })
   return short ? cal : `M${month} · ${cal}`
 }
