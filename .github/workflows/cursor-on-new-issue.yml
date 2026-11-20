@@ -1,0 +1,39 @@
+name: Send new issues to Cursor
+
+on:
+  issues:
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  send-to-cursor:
+    if: ${{ github.event.issue.user.login == 'timoeller' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call Cursor automation
+        env:
+          CURSOR_WEBHOOK_URL: ${{ secrets.CURSOR_WEBHOOK_URL }}
+          CURSOR_WEBHOOK_AUTH_HEADER: ${{ secrets.CURSOR_WEBHOOK_AUTH_HEADER }}
+        run: |
+          set -euo pipefail
+
+          jq '{
+            repository: .repository.full_name,
+            issue: {
+              number: .issue.number,
+              url: .issue.html_url,
+              author: .issue.user.login,
+              title: .issue.title,
+              body: (.issue.body // "")
+            }
+          }' "$GITHUB_EVENT_PATH" > payload.json
+
+          curl --silent --show-error --fail --max-time 30 \
+            --request POST \
+            --header "$CURSOR_WEBHOOK_AUTH_HEADER" \
+            --header 'Content-Type: application/json' \
+            --data-binary @payload.json \
+            --output /dev/null \
+            "$CURSOR_WEBHOOK_URL"
