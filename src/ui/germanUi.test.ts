@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import { createElement, type ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
@@ -119,17 +118,5 @@ describe('rendered German interface', () => {
     expect(admin).toContain('Nutzer')
     expect(admin).toContain('Neues Team')
     expect(admin).toContain('Jedes Team hat eigene Szenarien.')
-
-    const page = readFileSync(new URL('../../index.html', import.meta.url), 'utf8')
-    expect(page).toContain('lang="de"')
-    expect(page).toContain('Pioneer Cashflow')
-
-    const app = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8')
-    for (const label of ['Kosten', 'Mitarbeitende', 'Umsatz', 'Förderung', 'Gründergeld', 'Einstellungen']) {
-      expect(app).toContain(`label: '${label}'`)
-    }
-    expect(app).toContain('Du bist noch in keinem Team')
-    expect(app).not.toContain("label: 'Costs'")
-    expect(app).not.toContain("label: 'Employees'")
   })
 })

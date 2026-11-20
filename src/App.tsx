@@ -19,19 +19,11 @@ import { teamStore, type Team } from './firebase'
 import { computeCashflow, summarize } from './model/cashflow'
 import type { PlanState } from './model/types'
 import { useCloudSync } from './storage/useCloudSync'
+import { PLAN_TABS } from './ui/de'
 import { useAccess } from './useAccess'
 
-type Tab = 'costs' | 'employees' | 'revenue' | 'grant' | 'founders' | 'settings'
+type Tab = (typeof PLAN_TABS)[number]['id']
 type View = 'plan' | 'admin'
-
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'costs', label: 'Kosten' },
-  { id: 'employees', label: 'Mitarbeitende' },
-  { id: 'revenue', label: 'Umsatz' },
-  { id: 'grant', label: 'Förderung' },
-  { id: 'founders', label: 'Gründergeld' },
-  { id: 'settings', label: 'Einstellungen' },
-]
 
 function Brand() {
   return (
@@ -153,7 +145,7 @@ function Planner({ user, team, hidden }: { user: User; team: Team; hidden: boole
 
           <section className="inputs">
             <nav className="tabs" role="tablist">
-              {TABS.map((t) => (
+              {PLAN_TABS.map((t) => (
                 <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
                   {t.label}
                 </button>

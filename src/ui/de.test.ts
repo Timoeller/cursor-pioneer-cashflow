@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CHART_SERIES, DEFAULT_SCENARIO_NAME, UNTITLED_SCENARIO, deCount } from './de'
+import { CHART_SERIES, DEFAULT_SCENARIO_NAME, PLAN_TABS, UNTITLED_SCENARIO, deCount } from './de'
 
 describe('German copy helpers', () => {
   it('picks the singular or plural noun', () => {
@@ -12,5 +12,6 @@ describe('German copy helpers', () => {
     expect(DEFAULT_SCENARIO_NAME).toBe('Basisszenario')
     expect(UNTITLED_SCENARIO).toBe('Unbenannt')
     expect(Object.values(CHART_SERIES)).toEqual(['Bestand', 'Gründergeld', 'Umsatz', 'Förderung', 'Kosten'])
+    expect(PLAN_TABS.map((tab) => tab.label)).toEqual(['Kosten', 'Mitarbeitende', 'Umsatz', 'Förderung', 'Gründergeld', 'Einstellungen'])
   })
 })

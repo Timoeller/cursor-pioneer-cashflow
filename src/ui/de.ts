@@ -1,5 +1,14 @@
 /** German labels shared by more than one screen. */
 
+export const PLAN_TABS = [
+  { id: 'costs', label: 'Kosten' },
+  { id: 'employees', label: 'Mitarbeitende' },
+  { id: 'revenue', label: 'Umsatz' },
+  { id: 'grant', label: 'Förderung' },
+  { id: 'founders', label: 'Gründergeld' },
+  { id: 'settings', label: 'Einstellungen' },
+] as const
+
 export const DEFAULT_SCENARIO_NAME = 'Basisszenario'
 export const UNTITLED_SCENARIO = 'Unbenannt'
 
