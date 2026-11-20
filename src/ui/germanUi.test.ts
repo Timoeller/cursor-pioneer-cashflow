@@ -58,11 +58,27 @@ describe('rendered German interface', () => {
     expect(bar).toContain('2 Szenarien')
     expect(bar).toContain('Cloud-Fehler')
 
-    const costs = html(createElement(CostsTable, { costs: state.costs, currency: 'EUR', onChange: () => undefined }))
+    const costs = html(createElement(CostsTable, { costs: state.costs, employees: state.employees, currency: 'EUR', onChange: () => undefined }))
     expect(costs).toContain('Kosten hinzufügen')
     expect(costs).toContain('monatlich')
     expect(costs).toContain('einmalig')
+    expect(costs).toContain('einzeln')
+    expect(costs).toContain('pro Mitarbeitendem')
     expect(costs).not.toContain('Add cost')
+
+    const perPerson = html(
+      createElement(CostsTable, {
+        costs: [{ id: 'c', name: 'Laptop', monthlyAmount: 10, recurring: true, perEmployee: true, startMonth: 1, endMonth: null, comment: '' }],
+        employees: [
+          { id: 'a', name: 'A', monthlySalary: 0, startMonth: 1, endMonth: null, fundingEligiblePct: 0 },
+          { id: 'b', name: 'B', monthlySalary: 0, startMonth: 1, endMonth: 1, fundingEligiblePct: 0 },
+        ],
+        currency: 'EUR',
+        onChange: () => undefined,
+      }),
+    )
+    expect(perPerson.replace(/[\u00a0\u202f]/g, ' ')).toContain('20 €')
+    expect(perPerson).toContain('2 Personen im Startmonat')
 
     const people = html(
       createElement(EmployeesTable, {

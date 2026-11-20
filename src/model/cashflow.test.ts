@@ -21,12 +21,37 @@ describe('computeCashflow', () => {
   it('books recurring costs every active month and one-off costs once', () => {
     const s = emptyState()
     s.costs = [
-      { id: 'r', name: 'rent', monthlyAmount: 100, recurring: true, multiplier: 2, startMonth: 3, endMonth: 5, comment: '' },
-      { id: 'o', name: 'notary', monthlyAmount: 1000, recurring: false, multiplier: 1, startMonth: 2, endMonth: null, comment: '' },
+      { id: 'r', name: 'rent', monthlyAmount: 100, recurring: true, perEmployee: false, startMonth: 3, endMonth: 5, comment: '' },
+      { id: 'o', name: 'notary', monthlyAmount: 1000, recurring: false, perEmployee: false, startMonth: 2, endMonth: null, comment: '' },
     ]
     const rows = computeCashflow(s)
-    expect(rows.map((r) => r.costs.r)).toEqual([0, 0, 200, 200, 200, 0, 0, 0, 0, 0, 0, 0])
+    expect(rows.map((r) => r.costs.r)).toEqual([0, 0, 100, 100, 100, 0, 0, 0, 0, 0, 0, 0])
     expect(rows.map((r) => r.costs.o)).toEqual([0, 1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+  })
+
+  it('scales a per-employee cost with the people working in that month', () => {
+    const s = emptyState()
+    s.employees = [
+      { id: 'a', name: 'A', monthlySalary: 0, startMonth: 1, endMonth: 2, fundingEligiblePct: 0 },
+      { id: 'b', name: 'B', monthlySalary: 0, startMonth: 2, endMonth: null, fundingEligiblePct: 0 },
+      { id: 'c', name: 'C', monthlySalary: 0, startMonth: 4, endMonth: 4, fundingEligiblePct: 0 },
+    ]
+    s.costs = [
+      { id: 'r', name: 'laptop', monthlyAmount: 10, recurring: true, perEmployee: true, startMonth: 1, endMonth: 4, comment: '' },
+      { id: 'o', name: 'welcome kit', monthlyAmount: 100, recurring: false, perEmployee: true, startMonth: 2, endMonth: null, comment: '' },
+      { id: 's', name: 'rent', monthlyAmount: 50, recurring: true, perEmployee: false, startMonth: 1, endMonth: null, comment: '' },
+    ]
+    const rows = computeCashflow(s)
+    // month 1: A, month 2: A+B, month 3: B, month 4: B+C, then the recurring line has ended
+    expect(rows.map((r) => r.costs.r)).toEqual([10, 20, 10, 20, 0, 0, 0, 0, 0, 0, 0, 0])
+    expect(rows.map((r) => r.costs.o)).toEqual([0, 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    expect(rows.map((r) => r.costs.s).slice(0, 4)).toEqual([50, 50, 50, 50])
+    expect(rows[0].otherCosts).toBe(60)
+    expect(rows[1].otherCosts).toBe(270)
+
+    s.employees = []
+    expect(computeCashflow(s)[0].costs.r).toBe(0)
+    expect(computeCashflow(s)[0].costs.s).toBe(50)
   })
 
   it('covers fundable personnel at the funding rate and leaves the rest to the founders', () => {
@@ -56,7 +81,7 @@ describe('computeCashflow', () => {
     s.settings.employerSurchargePct = 0
     s.employees = [{ id: 'e', name: 'Dev', monthlySalary: 100, startMonth: 1, endMonth: 1, fundingEligiblePct: 50 }]
     // allowance = 100 x 50% x 40% = 20
-    s.costs = [{ id: 'c', name: 'office', monthlyAmount: 30, recurring: false, multiplier: 1, startMonth: 1, endMonth: null, comment: '' }]
+    s.costs = [{ id: 'c', name: 'office', monthlyAmount: 30, recurring: false, perEmployee: false, startMonth: 1, endMonth: null, comment: '' }]
     const row = computeCashflow(s)[0]
     expect(row.additionalAllowance).toBeCloseTo(20)
     expect(row.grantOnAdditional).toBeCloseTo(20)
@@ -74,7 +99,7 @@ describe('computeCashflow', () => {
     s.settings.horizonMonths = 4
     s.funding.amount = 100
     s.employees = [{ id: 'e', name: 'Dev', monthlySalary: 100, startMonth: 1, endMonth: null, fundingEligiblePct: 50 }]
-    s.costs = [{ id: 'c', name: 'office', monthlyAmount: 30, recurring: true, multiplier: 1, startMonth: 1, endMonth: null, comment: '' }]
+    s.costs = [{ id: 'c', name: 'office', monthlyAmount: 30, recurring: true, perEmployee: false, startMonth: 1, endMonth: null, comment: '' }]
     const rows = computeCashflow(s)
     // each month would claim 40 of salary + 20 of additional costs
     expect(rows[0].grantCovered).toBeCloseTo(60)
