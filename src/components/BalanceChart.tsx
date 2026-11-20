@@ -1,6 +1,7 @@
 import { Area, Bar, CartesianGrid, ComposedChart, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { MonthRow, Settings } from '../model/types'
 import { balanceTooltipText } from '../ui/balanceTooltip'
+import { CHART_SERIES } from '../ui/de'
 import { money, monthLabel } from '../ui/format'
 
 interface Props {
@@ -28,8 +29,8 @@ export function BalanceChart({ rows, settings }: Props) {
     <section className="card">
       <header className="card-head">
         <div>
-          <h2>Cash balance</h2>
-          <p className="muted">Closing balance per month (line), money in and out (bars).</p>
+          <h2>Kassenstand</h2>
+          <p className="muted">Schlussbestand je Monat (Linie), Ein- und Auszahlungen (Balken).</p>
         </div>
       </header>
       <div className="chart">
@@ -57,11 +58,11 @@ export function BalanceChart({ rows, settings }: Props) {
             />
             <Legend />
             <ReferenceLine y={0} stroke="var(--text)" strokeOpacity={0.5} />
-            <Bar dataKey="founder" name="Founder cash" stackId="flow" fill="var(--founder)" />
-            <Bar dataKey="revenue" name="Revenue" stackId="flow" fill="var(--revenue)" />
-            <Bar dataKey="grant" name="Grant" stackId="flow" fill="var(--grant)" />
-            <Bar dataKey="out" name="Costs" stackId="flow" fill="var(--cost)" />
-            <Area type="monotone" dataKey="balance" name="Balance" stroke="url(#balanceStroke)" strokeWidth={2.5} fill="url(#balanceFill)" dot={false} />
+            <Bar dataKey="founder" name={CHART_SERIES.founder} stackId="flow" fill="var(--founder)" />
+            <Bar dataKey="revenue" name={CHART_SERIES.revenue} stackId="flow" fill="var(--revenue)" />
+            <Bar dataKey="grant" name={CHART_SERIES.grant} stackId="flow" fill="var(--grant)" />
+            <Bar dataKey="out" name={CHART_SERIES.costs} stackId="flow" fill="var(--cost)" />
+            <Area type="monotone" dataKey="balance" name={CHART_SERIES.balance} stroke="url(#balanceStroke)" strokeWidth={2.5} fill="url(#balanceFill)" dot={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

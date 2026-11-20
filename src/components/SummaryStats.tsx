@@ -1,5 +1,6 @@
 import type { Summary } from '../model/cashflow'
 import type { Settings } from '../model/types'
+import { deCount } from '../ui/de'
 import { money, monthLabel, pct } from '../ui/format'
 
 interface Props {
@@ -22,56 +23,58 @@ export function SummaryStats({ summary: s, settings }: Props) {
   const horizon = settings.horizonMonths
   const runwayText =
     s.firstNegativeMonth == null
-      ? `Funded for all ${horizon} months`
-      : `Cash runs out in ${monthLabel(s.firstNegativeMonth, settings.foundingMonth)}`
+      ? horizon === 1
+        ? 'Für den ganzen Monat finanziert'
+        : `Für alle ${horizon} Monate finanziert`
+      : `Das Geld ist aufgebraucht in ${monthLabel(s.firstNegativeMonth, settings.foundingMonth)}`
 
   return (
     <div className="stats">
       <Stat
-        label="Runway"
-        value={s.firstNegativeMonth == null ? `${horizon}+ months` : `${s.runwayMonths} ${s.runwayMonths === 1 ? 'month' : 'months'}`}
+        label="Reichweite"
+        value={s.firstNegativeMonth == null ? `${horizon}+ Monate` : deCount(s.runwayMonths, 'Monat', 'Monate')}
         sub={runwayText}
         tone={s.firstNegativeMonth == null ? 'good' : s.runwayMonths < 6 ? 'bad' : 'warn'}
       />
       <Stat
-        label="Lowest balance"
+        label="Niedrigster Stand"
         value={money(s.minBalance, cur)}
-        sub={s.minBalanceMonth ? `in ${monthLabel(s.minBalanceMonth, settings.foundingMonth)}` : 'at start'}
+        sub={s.minBalanceMonth ? `in ${monthLabel(s.minBalanceMonth, settings.foundingMonth)}` : 'zu Beginn'}
         tone={s.minBalance < 0 ? 'bad' : undefined}
       />
-      <Stat label="Balance at end" value={money(s.endBalance, cur)} sub={`after ${horizon} months`} tone={s.endBalance < 0 ? 'bad' : undefined} />
+      <Stat label="Stand am Ende" value={money(s.endBalance, cur)} sub={`nach ${deCount(horizon, 'Monat', 'Monaten')}`} tone={s.endBalance < 0 ? 'bad' : undefined} />
       <Stat
-        label="Additional cash needed"
+        label="Zusätzlich benötigtes Geld"
         value={money(Math.max(0, -s.minBalance), cur)}
-        sub="to never go below zero"
+        sub="damit der Stand nie unter null fällt"
         tone={s.minBalance < 0 ? 'bad' : 'good'}
       />
-      <Stat label="Total costs" value={money(s.totalOut, cur)} sub={`personnel ${money(s.personnel, cur)} · other ${money(s.otherCosts, cur)}`} />
-      <Stat label="Avg. monthly burn" value={money(s.avgMonthlyBurn, cur)} sub={`net of inflows: ${money(s.avgNetBurn, cur)}`} />
+      <Stat label="Gesamtkosten" value={money(s.totalOut, cur)} sub={`Personal ${money(s.personnel, cur)} · sonstige ${money(s.otherCosts, cur)}`} />
+      <Stat label="Ø monatlicher Verbrauch" value={money(s.avgMonthlyBurn, cur)} sub={`nach Zuflüssen: ${money(s.avgNetBurn, cur)}`} />
       <Stat
-        label="Grant covers"
+        label="Förderung deckt"
         value={money(s.grantCovered, cur)}
         sub={
           s.runsOutMonth == null
-            ? `${money(s.grantRemaining, cur)} of ${money(s.grantAmount, cur)} still left after month ${settings.horizonMonths}`
-            : `runs out in ${monthLabel(s.runsOutMonth, settings.foundingMonth)} · ${money(s.grantAmount, cur)} in total`
+            ? `${money(s.grantRemaining, cur)} von ${money(s.grantAmount, cur)} sind nach Monat ${settings.horizonMonths} noch übrig`
+            : `aufgebraucht in ${monthLabel(s.runsOutMonth, settings.foundingMonth)} · ${money(s.grantAmount, cur)} insgesamt`
         }
       />
       <Stat
-        label="Founders must finance"
+        label="Gründer müssen finanzieren"
         value={money(s.foundersNeed, cur)}
         sub={
           s.revenue > 0
-            ? `${money(s.founderBorne, cur)} of costs are not covered, revenue covers ${money(Math.min(s.revenue, s.founderBorne), cur)}`
-            : 'costs the grant does not cover'
+            ? `${money(s.founderBorne, cur)} der Kosten sind nicht gedeckt, der Umsatz deckt ${money(Math.min(s.revenue, s.founderBorne), cur)}`
+            : 'Kosten, die die Förderung nicht deckt'
         }
         tone={s.foundersNeed > s.founderTotal ? 'warn' : 'good'}
       />
-      <Stat label="Revenue" value={money(s.revenue, cur)} sub="from customers, within the horizon" />
+      <Stat label="Umsatz" value={money(s.revenue, cur)} sub="von Kunden, innerhalb des Planungshorizonts" />
       <Stat
-        label="Founder cash entered"
+        label="Eingezahltes Gründergeld"
         value={money(s.founderTotal, cur)}
-        sub={s.foundersNeed > 0 ? `covers ${pct(Math.min(1, s.founderTotal / s.foundersNeed))} of what founders must finance` : 'nothing further required by the grant'}
+        sub={s.foundersNeed > 0 ? `deckt ${pct(Math.min(1, s.founderTotal / s.foundersNeed))} dessen, was die Gründer finanzieren müssen` : 'durch die Förderung ist nichts weiter nötig'}
       />
     </div>
   )

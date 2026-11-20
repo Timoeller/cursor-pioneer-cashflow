@@ -20,39 +20,39 @@ export function FounderCashTable({ founderCash, settings, onChange }: Props) {
     <section className="card">
       <header className="card-head">
         <div>
-          <h2>Founder cash</h2>
-          <p className="muted">Own money the founders put into the company, e.g. share capital or shareholder loans.</p>
+          <h2>Gründergeld</h2>
+          <p className="muted">Eigenes Geld, das die Gründer ins Unternehmen einzahlen, z. B. Stammkapital oder Gesellschafterdarlehen.</p>
         </div>
         <button type="button" className="btn" onClick={() => onChange([...founderCash, { id: newId('f'), founder: '', month: 1, amount: 0 }])}>
-          + Add injection
+          + Einzahlung hinzufügen
         </button>
       </header>
       <div className="table-wrap">
         <table className="edit-table">
           <thead>
             <tr>
-              <th>Founder</th>
-              <th className="r">Month</th>
+              <th>Gründer</th>
+              <th className="r">Monat</th>
               <th />
-              <th className="r">Amount</th>
+              <th className="r">Betrag</th>
               <th />
             </tr>
           </thead>
           <tbody>
             {founderCash.map((f) => (
               <tr key={f.id}>
-                <td><TextField value={f.founder} placeholder="Name" onChange={(founder) => set(f.id, { founder })} ariaLabel="Founder name" /></td>
-                <td><NumberField className="short" value={f.month} min={1} step={1} onChange={(v) => set(f.id, { month: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Month" /></td>
+                <td><TextField value={f.founder} placeholder="Name" onChange={(founder) => set(f.id, { founder })} ariaLabel="Name des Gründers" /></td>
+                <td><NumberField className="short" value={f.month} min={1} step={1} onChange={(v) => set(f.id, { month: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Monat" /></td>
                 <td className="muted">{monthLabel(f.month, settings.foundingMonth)}</td>
-                <td><NumberField value={f.amount} min={0} onChange={(v) => set(f.id, { amount: v ?? 0 })} ariaLabel="Amount" /></td>
-                <td><RemoveButton label="Remove injection" onClick={() => onChange(removeRow(founderCash, f.id))} /></td>
+                <td><NumberField value={f.amount} min={0} onChange={(v) => set(f.id, { amount: v ?? 0 })} ariaLabel="Betrag" /></td>
+                <td><RemoveButton label="Einzahlung entfernen" onClick={() => onChange(removeRow(founderCash, f.id))} /></td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
               <td colSpan={3}>
-                Total
+                Summe
                 {byFounder.size > 1 && (
                   <span className="muted">
                     {' '}({[...byFounder].map(([name, v]) => `${name}: ${money(v, settings.currency)}`).join(', ')})

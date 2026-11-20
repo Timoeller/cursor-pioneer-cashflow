@@ -25,12 +25,12 @@ type Tab = 'costs' | 'employees' | 'revenue' | 'grant' | 'founders' | 'settings'
 type View = 'plan' | 'admin'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'costs', label: 'Costs' },
-  { id: 'employees', label: 'Employees' },
-  { id: 'revenue', label: 'Revenue' },
-  { id: 'grant', label: 'Grant' },
-  { id: 'founders', label: 'Founder cash' },
-  { id: 'settings', label: 'Settings' },
+  { id: 'costs', label: 'Kosten' },
+  { id: 'employees', label: 'Mitarbeitende' },
+  { id: 'revenue', label: 'Umsatz' },
+  { id: 'grant', label: 'Förderung' },
+  { id: 'founders', label: 'Gründergeld' },
+  { id: 'settings', label: 'Einstellungen' },
 ]
 
 function Brand() {
@@ -38,8 +38,8 @@ function Brand() {
     <div className="brand">
       <div className="logo" aria-hidden="true">₵</div>
       <div>
-        <h1>Pioneer Cash Flow</h1>
-        <p className="muted small">Costs, revenue, grant and founder cash, month by month</p>
+        <h1>Pioneer Cashflow</h1>
+        <p className="muted small">Kosten, Umsatz, Förderung und Gründergeld, Monat für Monat</p>
       </div>
     </div>
   )
@@ -97,9 +97,9 @@ function PlannerShell({
   return (
     <div className="app">
       {isAdmin && (
-        <nav className="view-tabs" aria-label="Sections">
+        <nav className="view-tabs" aria-label="Bereiche">
           <button type="button" className={shownView === 'plan' ? 'active' : ''} disabled={!team} onClick={() => setView('plan')}>
-            Cash flow
+            Cashflow
           </button>
           <button type="button" className={shownView === 'admin' ? 'active' : ''} onClick={() => setView('admin')}>
             Admin
@@ -117,7 +117,7 @@ function PlannerShell({
               <UserMenu user={user} />
             </div>
           </header>
-          {!team && <div className="notice warn">You are not in a team yet. Assign yourself to a team below to use the cash flow planner.</div>}
+          {!team && <div className="notice warn">Du bist noch in keinem Team. Weise dir unten ein Team zu, um den Cashflow-Planer zu nutzen.</div>}
           <AdminPanel currentUid={user.uid} />
         </>
       )}
@@ -172,10 +172,10 @@ function Planner({ user, team, hidden }: { user: User; team: Team; hidden: boole
           <MonthlyTable rows={rows} state={state} />
         </main>
       ) : (
-        !cloud.error && <p className="muted">Loading scenarios…</p>
+        !cloud.error && <p className="muted">Szenarien werden geladen…</p>
       )}
 
-      <footer className="footer muted small">Months are counted from founding (month 1). Scenarios are shared with everyone in {team.name}.</footer>
+      <footer className="footer muted small">Monate werden ab der Gründung gezählt (Monat 1). Szenarien sind für alle in {team.name} sichtbar.</footer>
     </div>
   )
 }

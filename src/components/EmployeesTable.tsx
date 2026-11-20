@@ -26,9 +26,9 @@ export function EmployeesTable({ employees, surchargePct, fundingRatePct, additi
     <section className="card">
       <header className="card-head">
         <div>
-          <h2>Employees</h2>
+          <h2>Mitarbeitende</h2>
           <p className="muted">
-            Gross monthly salary. Employer cost adds {surchargePct} % on top. Start month counts from founding (month 1). The grant pays {fundingRatePct} % of the fundable share, and that share also creates an additional-cost budget of {additionalCostPct} %.
+            Bruttomonatsgehalt. Die Arbeitgeberkosten kommen mit {surchargePct} % obendrauf. Der Startmonat zählt ab der Gründung (Monat 1). Die Förderung zahlt {fundingRatePct} % des förderfähigen Anteils, und dieser Anteil erzeugt zusätzlich ein Gemeinkostenbudget von {additionalCostPct} %.
           </p>
         </div>
         <button
@@ -37,26 +37,26 @@ export function EmployeesTable({ employees, surchargePct, fundingRatePct, additi
           onClick={() =>
             onChange([
               ...employees,
-              { id: newId('e'), name: `Employee ${employees.length + 1}`, monthlySalary: 5000, startMonth: 1, endMonth: null, fundingEligiblePct: 100 },
+              { id: newId('e'), name: `Mitarbeiter ${employees.length + 1}`, monthlySalary: 5000, startMonth: 1, endMonth: null, fundingEligiblePct: 100 },
             ])
           }
         >
-          + Add employee
+          + Person hinzufügen
         </button>
       </header>
       <div className="table-wrap">
         <table className="edit-table">
           <thead>
             <tr>
-              <th>Name / role</th>
-              <th className="r">Gross salary / month</th>
-              <th className="r">Start month</th>
-              <th className="r">End month</th>
-              <th className="r">Funding-eligible %</th>
-              <th className="r">Employer cost / month</th>
-              <th className="r">Eligible / month</th>
-              <th className="r" title="Eligible cost x funding rate">Grant / month</th>
-              <th className="r" title="Eligible cost x additional-cost rate. The funding rate is not applied.">Extra budget / month</th>
+              <th>Name / Rolle</th>
+              <th className="r">Bruttogehalt / Monat</th>
+              <th className="r">Startmonat</th>
+              <th className="r">Endmonat</th>
+              <th className="r">Förderfähig %</th>
+              <th className="r">Arbeitgeberkosten / Monat</th>
+              <th className="r">Förderfähig / Monat</th>
+              <th className="r" title="Förderfähige Kosten × Fördersatz">Förderung / Monat</th>
+              <th className="r" title="Förderfähige Kosten × Gemeinkostensatz. Der Fördersatz wird nicht angewendet.">Zusatzbudget / Monat</th>
               <th />
             </tr>
           </thead>
@@ -65,10 +65,10 @@ export function EmployeesTable({ employees, surchargePct, fundingRatePct, additi
               const cost = employeeMonthlyCost(e, surchargePct)
               return (
                 <tr key={e.id}>
-                  <td><TextField value={e.name} onChange={(name) => set(e.id, { name })} ariaLabel="Employee name" /></td>
-                  <td><NumberField value={e.monthlySalary} min={0} onChange={(v) => set(e.id, { monthlySalary: v ?? 0 })} ariaLabel="Salary" /></td>
-                  <td><NumberField className="short" value={e.startMonth} min={1} step={1} onChange={(v) => set(e.id, { startMonth: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Start month" /></td>
-                  <td><NumberField className="short" value={e.endMonth} min={1} step={1} allowEmpty placeholder="∞" onChange={(v) => set(e.id, { endMonth: v == null ? null : Math.round(v) })} ariaLabel="End month" /></td>
+                  <td><TextField value={e.name} onChange={(name) => set(e.id, { name })} ariaLabel="Name" /></td>
+                  <td><NumberField value={e.monthlySalary} min={0} onChange={(v) => set(e.id, { monthlySalary: v ?? 0 })} ariaLabel="Gehalt" /></td>
+                  <td><NumberField className="short" value={e.startMonth} min={1} step={1} onChange={(v) => set(e.id, { startMonth: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Startmonat" /></td>
+                  <td><NumberField className="short" value={e.endMonth} min={1} step={1} allowEmpty placeholder="∞" onChange={(v) => set(e.id, { endMonth: v == null ? null : Math.round(v) })} ariaLabel="Endmonat" /></td>
                   <td>
                     <div className="pct-field">
                       <input
@@ -78,23 +78,23 @@ export function EmployeesTable({ employees, surchargePct, fundingRatePct, additi
                         step={5}
                         value={e.fundingEligiblePct}
                         onChange={(ev) => set(e.id, { fundingEligiblePct: Number(ev.target.value) })}
-                        aria-label="Funding-eligible percent slider"
+                        aria-label="Schieberegler förderfähiger Anteil"
                       />
-                      <NumberField className="short" value={e.fundingEligiblePct} min={0} max={100} onChange={(v) => set(e.id, { fundingEligiblePct: Math.min(100, Math.max(0, v ?? 0)) })} ariaLabel="Funding-eligible percent" />
+                      <NumberField className="short" value={e.fundingEligiblePct} min={0} max={100} onChange={(v) => set(e.id, { fundingEligiblePct: Math.min(100, Math.max(0, v ?? 0)) })} ariaLabel="Förderfähiger Anteil" />
                     </div>
                   </td>
                   <td className="r mono">{money(cost, currency)}</td>
                   <td className="r mono">{money((cost * e.fundingEligiblePct) / 100, currency)}</td>
                   <td className="r mono">{money(grantOn((cost * e.fundingEligiblePct) / 100), currency)}</td>
                   <td className="r mono">{money(extraOn((cost * e.fundingEligiblePct) / 100), currency)}</td>
-                  <td><RemoveButton label={`Remove ${e.name}`} onClick={() => onChange(removeRow(employees, e.id))} /></td>
+                  <td><RemoveButton label={`${e.name} entfernen`} onClick={() => onChange(removeRow(employees, e.id))} /></td>
                 </tr>
               )
             })}
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={5}>Total when everyone is on board</td>
+              <td colSpan={5}>Summe, wenn alle dabei sind</td>
               <td className="r mono">{money(totalCost, currency)}</td>
               <td className="r mono">{money(totalEligible, currency)}</td>
               <td className="r mono">{money(grantOn(totalEligible), currency)}</td>
