@@ -10,9 +10,11 @@ export interface Settings {
 export interface CostItem {
   id: string
   name: string
+  /** Amount for one booking. Per-employee costs multiply this by the people active that month. */
   monthlyAmount: number
   recurring: boolean
-  multiplier: number
+  /** When true, the amount is charged once per employee active in that month. */
+  perEmployee: boolean
   startMonth: number
   endMonth: number | null
   comment: string

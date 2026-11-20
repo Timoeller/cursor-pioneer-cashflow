@@ -32,6 +32,24 @@ describe('scenario store', () => {
     expect(s.costs.length).toBeGreaterThan(0)
   })
 
+  it('folds a legacy numeric cost factor into the amount and drops it', () => {
+    const s = normalizeState({
+      costs: [
+        { id: 'soft', name: 'software', monthlyAmount: 200, recurring: true, multiplier: 3, startMonth: 1, endMonth: null, comment: 'subs' },
+        { id: 'flat', name: 'rent', monthlyAmount: 50, recurring: true, multiplier: 1, startMonth: 2, endMonth: 4, comment: '' },
+        { id: 'per', name: 'laptop', monthlyAmount: 10, recurring: true, perEmployee: true, multiplier: 3, startMonth: 1, comment: '' },
+      ],
+    })
+    expect(s.costs.map(({ id, monthlyAmount, perEmployee }) => ({ id, monthlyAmount, perEmployee }))).toEqual([
+      { id: 'soft', monthlyAmount: 600, perEmployee: false },
+      { id: 'flat', monthlyAmount: 50, perEmployee: false },
+      { id: 'per', monthlyAmount: 10, perEmployee: true },
+    ])
+    expect(s.costs.every((c) => !('multiplier' in c))).toBe(true)
+    expect(s.costs[1].endMonth).toBe(4)
+    expect(s.costs[2].endMonth).toBeNull()
+  })
+
   it('migrates scenarios saved with the old grant components', () => {
     const s = normalizeState({
       fundingPeriod: { fromMonth: 3, toMonth: 18 },

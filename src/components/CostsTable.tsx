@@ -1,4 +1,5 @@
-import type { CostItem } from '../model/types'
+import { costInMonth, employeesActiveInMonth } from '../model/cashflow'
+import type { CostItem, Employee } from '../model/types'
 import { newId } from '../storage/local'
 import { money } from '../ui/format'
 import { removeRow, updateRow } from '../ui/rows'
@@ -6,22 +7,32 @@ import { NumberField, RemoveButton, TextField } from './fields'
 
 interface Props {
   costs: CostItem[]
+  employees: Employee[]
   currency: string
   onChange: (costs: CostItem[]) => void
 }
 
-export function CostsTable({ costs, currency, onChange }: Props) {
+function previewTitle(c: CostItem, employees: Employee[]): string | undefined {
+  if (!c.perEmployee) return undefined
+  const people = employeesActiveInMonth(employees, c.startMonth)
+  const label = people === 1 ? '1 Person' : `${people} Personen`
+  return `${label} im Startmonat. Im monatlichen Cashflow zählt jeder Monat für sich.`
+}
+
+export function CostsTable({ costs, employees, currency, onChange }: Props) {
   const set = (id: string, patch: Partial<CostItem>) => onChange(updateRow(costs, id, patch))
-  const monthly = (c: CostItem) => c.monthlyAmount * c.multiplier
-  const recurringPerMonth = costs.filter((c) => c.recurring).reduce((s, c) => s + monthly(c), 0)
-  const oneOffTotal = costs.filter((c) => !c.recurring).reduce((s, c) => s + monthly(c), 0)
+  const atStart = (c: CostItem) => costInMonth(c, c.startMonth, employees)
+  const recurringPerMonth = costs.filter((c) => c.recurring).reduce((s, c) => s + atStart(c), 0)
+  const oneOffTotal = costs.filter((c) => !c.recurring).reduce((s, c) => s + atStart(c), 0)
 
   return (
     <section className="card">
       <header className="card-head">
         <div>
           <h2>Kosten</h2>
-          <p className="muted">Aus deiner Tabelle übernommen. Einmalige Kosten werden einmal im Startmonat gebucht.</p>
+          <p className="muted">
+            Aus deiner Tabelle übernommen. Einmalige Kosten werden einmal im Startmonat gebucht. Einzeln übernimmt den Betrag so. Pro Mitarbeitendem multipliziert ihn mit den Personen, die in diesem Monat auf dem Tab Mitarbeitende aktiv sind.
+          </p>
         </div>
         <button
           type="button"
@@ -29,7 +40,7 @@ export function CostsTable({ costs, currency, onChange }: Props) {
           onClick={() =>
             onChange([
               ...costs,
-              { id: newId('c'), name: 'Neue Kosten', monthlyAmount: 0, recurring: true, multiplier: 1, startMonth: 1, endMonth: null, comment: '' },
+              { id: newId('c'), name: 'Neue Kosten', monthlyAmount: 0, recurring: true, perEmployee: false, startMonth: 1, endMonth: null, comment: '' },
             ])
           }
         >
@@ -43,7 +54,7 @@ export function CostsTable({ costs, currency, onChange }: Props) {
               <th>Art</th>
               <th className="r">Betrag</th>
               <th>Wiederkehrend</th>
-              <th className="r">Faktor</th>
+              <th>Faktor</th>
               <th className="r">Startmonat</th>
               <th className="r">Endmonat</th>
               <th className="r">Pro Monat</th>
@@ -63,7 +74,12 @@ export function CostsTable({ costs, currency, onChange }: Props) {
                     <option value="no">einmalig</option>
                   </select>
                 </td>
-                <td><NumberField className="short" value={c.multiplier} min={0} onChange={(v) => set(c.id, { multiplier: v ?? 0 })} ariaLabel="Faktor" /></td>
+                <td>
+                  <select value={c.perEmployee ? 'perEmployee' : 'single'} onChange={(e) => set(c.id, { perEmployee: e.target.value === 'perEmployee' })} aria-label="Faktor">
+                    <option value="single">einzeln</option>
+                    <option value="perEmployee">pro Mitarbeitendem</option>
+                  </select>
+                </td>
                 <td><NumberField className="short" value={c.startMonth} min={1} step={1} onChange={(v) => set(c.id, { startMonth: Math.max(1, Math.round(v ?? 1)) })} ariaLabel="Startmonat" /></td>
                 <td>
                   {c.recurring ? (
@@ -72,8 +88,8 @@ export function CostsTable({ costs, currency, onChange }: Props) {
                     <span className="muted">-</span>
                   )}
                 </td>
-                <td className="r mono">{money(monthly(c), currency)}</td>
-                <td className="r mono">{money(c.recurring ? monthly(c) * 12 : monthly(c), currency)}</td>
+                <td className="r mono" title={previewTitle(c, employees)}>{money(atStart(c), currency)}</td>
+                <td className="r mono" title={previewTitle(c, employees)}>{money(c.recurring ? atStart(c) * 12 : atStart(c), currency)}</td>
                 <td><TextField className="wide" value={c.comment} onChange={(comment) => set(c.id, { comment })} ariaLabel="Kommentar" /></td>
                 <td><RemoveButton label={`${c.name} entfernen`} onClick={() => onChange(removeRow(costs, c.id))} /></td>
               </tr>

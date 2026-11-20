@@ -151,7 +151,7 @@ function Planner({ user, team, hidden }: { user: User; team: Team; hidden: boole
                 </button>
               ))}
             </nav>
-            {tab === 'costs' && <CostsTable costs={state.costs} currency={state.settings.currency} onChange={patch('costs')} />}
+            {tab === 'costs' && <CostsTable costs={state.costs} employees={state.employees} currency={state.settings.currency} onChange={patch('costs')} />}
             {tab === 'employees' && (
               <EmployeesTable employees={state.employees} surchargePct={state.settings.employerSurchargePct} fundingRatePct={state.funding.ratePct} additionalCostPct={state.funding.additionalCostPct} currency={state.settings.currency} onChange={patch('employees')} />
             )}

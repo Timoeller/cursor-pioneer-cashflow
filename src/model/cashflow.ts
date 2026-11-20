@@ -6,8 +6,16 @@ function isActive(start: number, end: number | null, month: number): boolean {
   return month >= start && (end == null || month <= end)
 }
 
-export function costInMonth(c: CostItem, month: number): number {
-  const amount = num(c.monthlyAmount) * num(c.multiplier)
+/** Employees whose start and end month include this month. End month is inclusive. */
+export function employeesActiveInMonth(employees: readonly Employee[], month: number): number {
+  let count = 0
+  for (const e of employees) if (isActive(num(e.startMonth), e.endMonth, month)) count += 1
+  return count
+}
+
+export function costInMonth(c: CostItem, month: number, employees: readonly Employee[]): number {
+  const factor = c.perEmployee ? employeesActiveInMonth(employees, month) : 1
+  const amount = num(c.monthlyAmount) * factor
   if (c.recurring) return isActive(num(c.startMonth), c.endMonth, month) ? amount : 0
   return month === num(c.startMonth) ? amount : 0
 }
@@ -110,7 +118,7 @@ export function computeCashflow(state: PlanState): MonthRow[] {
     const costs: Record<string, number> = {}
     let otherCosts = 0
     for (const c of state.costs) {
-      const v = costInMonth(c, month)
+      const v = costInMonth(c, month, state.employees)
       costs[c.id] = v
       otherCosts += v
     }

@@ -10,10 +10,38 @@ interface LegacyFunding extends Partial<FundingRules> {
   toMonth?: number
 }
 
-interface LegacyState extends Partial<Omit<PlanState, 'funding'>> {
+interface LegacyCost extends Partial<Omit<CostItem, 'perEmployee'>> {
+  multiplier?: unknown
+  perEmployee?: unknown
+}
+
+interface LegacyState extends Partial<Omit<PlanState, 'funding' | 'costs'>> {
   funding?: LegacyFunding
   fundingPeriod?: { fromMonth?: number; toMonth?: number }
   grantComponents?: { basis?: string; ratePct?: number }[]
+  costs?: unknown
+}
+
+function finiteNumber(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null
+}
+
+/** Old scenarios stored a numeric factor. Fold it into the amount and start the line as a single cost. */
+function normalizeCost(raw: LegacyCost, fallback: CostItem): CostItem {
+  const hasSwitch = typeof raw.perEmployee === 'boolean'
+  const multiplier = finiteNumber(raw.multiplier) ?? 1
+  const monthlyAmount = finiteNumber(raw.monthlyAmount) ?? fallback.monthlyAmount
+  const endMonth = raw.endMonth === null || finiteNumber(raw.endMonth) != null ? (raw.endMonth as number | null) : fallback.endMonth
+  return {
+    id: typeof raw.id === 'string' && raw.id ? raw.id : fallback.id,
+    name: typeof raw.name === 'string' ? raw.name : fallback.name,
+    monthlyAmount: hasSwitch ? monthlyAmount : monthlyAmount * multiplier,
+    recurring: typeof raw.recurring === 'boolean' ? raw.recurring : fallback.recurring,
+    perEmployee: raw.perEmployee === true,
+    startMonth: finiteNumber(raw.startMonth) ?? fallback.startMonth,
+    endMonth,
+    comment: typeof raw.comment === 'string' ? raw.comment : '',
+  }
 }
 
 /** Fills in missing fields and drops the old grant/loan split so saved scenarios still load. */
@@ -33,7 +61,7 @@ export function normalizeState(raw: unknown): PlanState {
   return {
     version: 1,
     settings: { ...base.settings, ...(r.settings ?? {}) },
-    costs: arr<Partial<CostItem>>(r.costs, base.costs).map((c) => ({ ...base.costs[0], comment: '', endMonth: null, ...c })),
+    costs: arr<LegacyCost>(r.costs, base.costs).map((c) => normalizeCost(c, { ...base.costs[0], comment: '', endMonth: null })),
     employees: arr<Partial<Employee>>(r.employees, base.employees).map((e) => ({ ...base.employees[0], endMonth: null, ...e })),
     funding,
     tranches: arr<Partial<Tranche>>(r.tranches, []).map((t) => ({
